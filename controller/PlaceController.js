@@ -1,6 +1,5 @@
 const express = require('express')
 const app = express();
-const conn = require('../connect/con');
 const {CampusModels,PlaceCmuModels} = require('../models/placeAtCmuModels');
 
 app.get('/place/showAllPlace',async(req,res)=>{

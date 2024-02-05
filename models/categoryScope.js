@@ -233,7 +233,7 @@ const {CampusModels,PlaceCmuModels} = require('../models/placeAtCmuModels');
 
 
 
-
+//เปิดเมื่อยังไม่มีตารางสร้างตาราง
 ScopeNumberModels.sync(/* { alter: true } */); 
 HeadCategoryModels.sync(/* { alter: true } */);
 GwpModels.sync(/* { alter: true } */); 
