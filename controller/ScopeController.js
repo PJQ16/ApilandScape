@@ -4,7 +4,7 @@ const app = express();
 const { ScopeNumberModels, HeadCategoryModels, GwpModels, categoryScopeModels } = require('../models/categoryScope');
 const conn = require('../connect/con');
 //APi สำหรับการ แสดงผลลัพท์ของแต่ละ scope แบบแยกตามประเภท Activity 
-app.get('/socpe/apiShowResultData', async (req, res) => {
+app.get('/landscape', async (req, res) => {
     try {
       const results = await conn.query(`
       SELECT
