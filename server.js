@@ -19,6 +19,7 @@ app.get('/checkConnect',async(req,res)=>{
 
 //ใช้ในการจัดการscope หมวดหมู่
 app.use(require('./controller/ScopeController'));
+app.use(require('./controller/PlaceController'));
 
 
 app.listen(port,()=>{

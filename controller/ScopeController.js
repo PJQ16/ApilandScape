@@ -7,10 +7,16 @@ const conn = require('../connect/con');
 app.get('/socpe/apiShowResultData', async (req, res) => {
     try {
       const results = await conn.query(`
-        SELECT
+      SELECT
+		  headcategories.id as id,
           head_name,
+		  campuses.id as campusId,
+          campus_name,
+          faculties.id as facultiesID,
+          fac_name,
           SUM(quantity * (CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) + (CH4 * gwp_CH4) + (N2O * gwp_N2O) + (SF6 * gwp_SF6) + (NF3 * gwp_NF3) + (HFCs * GWP_HFCs) + (PFCs * GWP_PFCs))/1000 AS tco2e,
-          scopenums.name AS name
+          scopenums.name AS name,
+          years
         FROM
           data_scopes
         INNER JOIN
@@ -19,17 +25,27 @@ app.get('/socpe/apiShowResultData', async (req, res) => {
           headcategories ON data_scopes.head_id = headcategories.id
         INNER JOIN
           scopenums ON headcategories.scopenum_id = scopenums.id
+        INNER JOIN
+         campuses ON data_scopes.campus_id = campuses.id
+         INNER JOIN
+         faculties ON data_scopes.fac_id = faculties.id
         WHERE
           scopenum_id = ?
         GROUP BY
-          head_id, scopenums.name
-  
+          head_id, scopenums.name,faculties.id,years
+
         UNION
   
         SELECT
+          headcategories.id as id,
           head_name,
+		  campuses.id as campusId,
+          campus_name,
+          faculties.id as facultiesID,
+          fac_name,
           SUM(quantity * (kgCO2e))/1000 AS tco2e,
-          scopenums.name AS name
+          scopenums.name AS name,
+          years
         FROM
           data_scopes
         INNER JOIN
@@ -38,12 +54,18 @@ app.get('/socpe/apiShowResultData', async (req, res) => {
           headcategories ON data_scopes.head_id = headcategories.id
         INNER JOIN
           scopenums ON headcategories.scopenum_id = scopenums.id
+           INNER JOIN
+         campuses ON data_scopes.campus_id = campuses.id
+         INNER JOIN
+         faculties ON data_scopes.fac_id = faculties.id
         WHERE
           scopenum_id != ?
         GROUP BY
-          head_id, scopenums.name
+          head_id, scopenums.name,faculties.id,years
+        ORDER BY
+        	years,campusId,name,id ASC;
       `, {
-        replacements: [1, 1], // ตัวเลข 1 แทน ? ใน query
+        replacements: [1, 1],
         type: conn.QueryTypes.SELECT,
       });
   
