@@ -20,7 +20,12 @@ app.get('/checkConnect',async(req,res)=>{
 //ใช้ในการจัดการscope หมวดหมู่
 app.use(require('./controller/ScopeController'));
 app.use(require('./controller/PlaceController'));
-
+app.use(require('./controller/UserController'));
+app.use(require('./controller/ActivityPeriodController'));
+app.use(require('./controller/SourcesFileController'));
+app.use(require('./controller/ImageFileController'));
+app.use(require('./controller/UncertaintyController'));
+app.use(require('./controller/SignificanceController'));
 
 app.listen(port,()=>{
     console.log(`server connecting http://localhost:${port}`);
