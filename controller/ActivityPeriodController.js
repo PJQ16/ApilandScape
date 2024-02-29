@@ -14,7 +14,8 @@ app.get('/activity/showPeriod',async(req,res)=>{
 
 app.post('/activity/AddPeriod',async(req,res)=>{
      try{
-        const AddData = await ActivityGHGModel.create(req.body);
+      const {activities} = req.body
+        const AddData = await ActivityGHGModel.bulkCreate(activities);
         res.status(200).json(AddData);
      }catch(e){
         res.status(500).json('Server Error ' + e.message);

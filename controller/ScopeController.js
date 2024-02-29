@@ -75,50 +75,118 @@ app.get('/landscape', async (req, res) => {
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });
+
+  app.get('/scope/currentApishow',async(req,res)=>{
+    try {
+      const current = await conn.query(`SELECT
+      scopenums.name AS name,
+          years,
+           SUM(quantity * (CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) + (CH4 * gwp_CH4) + (N2O * gwp_N2O) + (SF6 * gwp_SF6) + (NF3 * gwp_NF3) + (HFCs * GWP_HFCs) + (PFCs * GWP_PFCs))/1000 AS tco2e
+          
+         FROM
+           data_scopes
+         INNER JOIN
+           gwps ON data_scopes.GWP_id = gwps.id
+         INNER JOIN
+           headcategories ON data_scopes.head_id = headcategories.id
+         INNER JOIN
+           scopenums ON headcategories.scopenum_id = scopenums.id
+         INNER JOIN
+          campuses ON data_scopes.campus_id = campuses.id
+          INNER JOIN
+          faculties ON data_scopes.fac_id = faculties.id
+         WHERE
+           scopenum_id = ?
+             AND
+           years = YEAR(NOW())
+         GROUP BY
+        scopenums.name,years
+ 
+         UNION
+   
+         SELECT
+         scopenums.name AS name,
+           years,
+           SUM(quantity * (kgCO2e))/1000 AS tco2e
+         FROM
+           data_scopes
+         INNER JOIN
+           gwps ON data_scopes.GWP_id = gwps.id
+         INNER JOIN
+           headcategories ON data_scopes.head_id = headcategories.id
+         INNER JOIN
+           scopenums ON headcategories.scopenum_id = scopenums.id
+            INNER JOIN
+          campuses ON data_scopes.campus_id = campuses.id
+          INNER JOIN
+          faculties ON data_scopes.fac_id = faculties.id
+         WHERE
+           scopenum_id != ?
+           AND
+           years = YEAR(NOW())
+         GROUP BY
+           scopenums.name,years`, {
+        replacements: [1, 1],
+        type: conn.QueryTypes.SELECT,
+      });
+  
+      res.status(200).json(current);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
   
 
 
 //แสดง หมวดหมู่ทั้งหมดของ scop1 scope2 scop3 removal separate
 const eliteral = conn.literal('(CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) + (CH4 * gwp_CH4) + (N2O * gwp_N2O) + (SF6 * gwp_SF6) + (NF3 * gwp_NF3) + (HFCs * GWP_HFCs) + (PFCs * GWP_PFCs)');
+
 app.get('/scope/apiShowAll', async (req, res) => {
     try {
-        const showData = await categoryScopeModels.findAll({
-            attributes: [
-
-                'headcategory.head_name',
-                'name',
-                'lci',
-                'CO2',
-                'Fossil_CH4',
-                'CH4',
-                'N2O',
-                'SF6',
-                'NF3',
-                'HFCs',
-                'PFCs',
-                'GWP_HFCs',
-                'GWP_PFCs',
-                [eliteral, 'EF'],
-                'sources',
-                'kgCO2e',
-
-            ],
+        const showData = await ScopeNumberModels.findAll({
+            attributes: ['name'],
             include: [
                 {
-                model: GwpModels,
-                attributes: [],   
-                },
-                {
                     model: HeadCategoryModels,
-                    attributes: ['head_name','scopenum_id'],  
+                    attributes: ['head_name'],
+                    include: [
+                        {
+                            model: categoryScopeModels,
+                            attributes: [
+                                'name',
+                                'lci',
+                                'CO2',
+                                'Fossil_CH4',
+                                'CH4',
+                                'N2O',
+                                'SF6',
+                                'NF3',
+                                'HFCs',
+                                'PFCs',
+                                'GWP_HFCs',
+                                'GWP_PFCs',
+                                [eliteral, 'EF'],
+                                'sources',
+                                'kgCO2e',
+                            ],
+                            include: [
+                                {
+                                    model: GwpModels,
+                                    attributes: [],
+                                },
+                            ],
+                        },
+                    ],
                 },
-        ],
+            ],
         });
         res.status(200).send(showData);
     } catch (e) {
         res.status(500).send('Server Error ' + e.message);
     }
 });
+
 
 
 app.get('/scope/apiHeadCategoryData1',async(req,res)=>{

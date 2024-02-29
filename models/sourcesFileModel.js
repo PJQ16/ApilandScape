@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const conn = require('../connect/con')
-const {ActivityGHGModel} = require('../models/activityYear');
+const {dataScopeModels} = require('../models/categoryScope');
 
 const SourcesFileModel = conn.define('sources_file',{
     id: {
@@ -12,17 +12,17 @@ const SourcesFileModel = conn.define('sources_file',{
         type: DataTypes.STRING(255),
         allowNull: false
       },
-      activityperiod_id:{
+      datascope_id:{
         type: DataTypes.INTEGER(11),
         allowNull: false
       },
 });
-    ActivityGHGModel.hasMany(SourcesFileModel,{foreignKey:'activityperiod_id'});
-    SourcesFileModel.belongsTo(ActivityGHGModel,{foreignKey:'activityperiod_id'});
+    dataScopeModels.belongsTo(SourcesFileModel,{foreignKey:'datascope_id'});
+    SourcesFileModel.belongsTo(dataScopeModels,{foreignKey:'datascope_id'});
 
 
 
-    SourcesFileModel.sync({alter:true});
+    SourcesFileModel.sync(/* {alter:true} */);
 
     module.exports = {SourcesFileModel};
 
