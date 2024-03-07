@@ -81,7 +81,7 @@ app.post('/users/login', async (req, res) => {
           },
           {
             model: PlaceCmuModels,
-            attributes: ['fac_name'],
+            attributes: ['id','fac_name','campus_id'],
             include: [
               {
                 model: CampusModels,
@@ -90,7 +90,7 @@ app.post('/users/login', async (req, res) => {
             ],
           },
         ],
-        
+
       });
       res.status(200).json({ result: users, message: 'success' });
     } catch (e) {

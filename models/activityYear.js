@@ -12,6 +12,14 @@ const ActivityGHGModel = conn.define('activityperiod',{
         type: DataTypes.INTEGER(4),
         allowNull:false
     },
+    employee_amount:{
+        type:DataTypes.INTEGER(11),
+        defaultValue:0
+    },
+    building_area:{
+        type:DataTypes.DECIMAL(9,2),
+        defaultValue:0
+    },
     fac_id:{
         type: DataTypes.STRING(255),
         allowNull: false

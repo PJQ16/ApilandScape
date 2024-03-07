@@ -1,6 +1,7 @@
 const { DataTypes } = require('sequelize');
 const conn = require('../connect/con')
-const {ActivityGHGModel} = require('../models/activityYear')
+const {ActivityGHGModel} = require('../models/activityYear');
+const { dataScopeModels } = require('./categoryScope');
 
 const SignificanceModel = conn.define('significance',{
     id: {
@@ -36,13 +37,13 @@ const SignificanceModel = conn.define('significance',{
         type: DataTypes.STRING(255),
         allowNull: false
       },
-    activityperiod_id:{
+      datascope_id:{
         type: DataTypes.INTEGER(11),
         allowNull: false
       },
 });
-ActivityGHGModel.hasMany(SignificanceModel,{foreignKey:'activityperiod_id'});
-SignificanceModel.belongsTo(ActivityGHGModel,{foreignKey:'activityperiod_id'});
+dataScopeModels.hasMany(SignificanceModel,{foreignKey:'datascope_id'});
+SignificanceModel.belongsTo(dataScopeModels,{foreignKey:'datascope_id'});
 
 SignificanceModel.sync({alter:true});
 module.exports = {SignificanceModel};

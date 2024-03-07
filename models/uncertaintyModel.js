@@ -20,19 +20,10 @@ const UncertaintyModel = conn.define('uncertainty',{
     datascope_id:{
         type: DataTypes.INTEGER(11),
         allowNull: false
-      },
-      activityperiod_id:{
-        type: DataTypes.INTEGER(11),
-        allowNull: false
-      },
+      }
 });
     dataScopeModels.hasMany(UncertaintyModel,{foreignKey:'datascope_id'});
     UncertaintyModel.belongsTo(dataScopeModels,{foreignKey:'datascope_id'});
-
-    ActivityGHGModel.hasMany(UncertaintyModel,{foreignKey:'activityperiod_id'});
-    UncertaintyModel.belongsTo(ActivityGHGModel,{foreignKey:'activityperiod_id'});
-
-
 
     UncertaintyModel.sync({alter:true});
 

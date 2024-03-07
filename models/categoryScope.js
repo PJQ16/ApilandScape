@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const conn = require('../connect/con')
 const {CampusModels,PlaceCmuModels} = require('../models/placeAtCmuModels');
-
+const {ActivityGHGModel} = require('../models/activityYear')
                   const ScopeNumberModels = conn.define('scopenum', {
                       id: {
                         type: DataTypes.INTEGER(11),
@@ -11,8 +11,7 @@ const {CampusModels,PlaceCmuModels} = require('../models/placeAtCmuModels');
                       name: {
                         type: DataTypes.STRING(255),
                         allowNull:false
-                      }
-                    
+                      }        
                     });
 
                   
@@ -194,16 +193,8 @@ const {CampusModels,PlaceCmuModels} = require('../models/placeAtCmuModels');
                         type: DataTypes.INTEGER(11),
                         allowNull: false
                       },
-                      fac_id:{
-                        type: DataTypes.STRING(255),
-                        allowNull: false
-                      },
-                      campus_id:{
-                        type: DataTypes.STRING(255),
-                        allowNull: false
-                      },
-                      years:{
-                        type: DataTypes.INTEGER(4),
+                      activityPeriod_id:{
+                        type: DataTypes.INTEGER(11),
                         allowNull: false
                       }
                     });
@@ -223,20 +214,17 @@ const {CampusModels,PlaceCmuModels} = require('../models/placeAtCmuModels');
 
   GwpModels.hasMany(dataScopeModels,{foreignKey:'GWP_id'});
   dataScopeModels.belongsTo(GwpModels,{foreignKey:'GWP_id'});
-   
-  CampusModels.hasMany(dataScopeModels,{foreignKey:'campus_id'});
-  dataScopeModels.belongsTo(CampusModels,{foreignKey:'campus_id'});
 
-  PlaceCmuModels.hasMany(dataScopeModels,{foreignKey:'fac_id'});
-  dataScopeModels.belongsTo(PlaceCmuModels,{foreignKey:'fac_id'});
+  ActivityGHGModel.hasMany(dataScopeModels,{foreignKey:'activityPeriod_id'});
+  dataScopeModels.belongsTo(ActivityGHGModel,{foreignKey:'activityPeriod_id'});
 
 
 
 
 //เปิดเมื่อยังไม่มีตารางสร้างตาราง
-ScopeNumberModels.sync(/* { alter: true } */); 
+ScopeNumberModels.sync({ alter: true } ); 
 HeadCategoryModels.sync(/* { alter: true } */);
 GwpModels.sync(/* { alter: true } */); 
 categoryScopeModels.sync(/* { alter: true } */);  
-dataScopeModels.sync(/*  {alter:true} */ );
+dataScopeModels.sync(  {alter:true}  );
 module.exports = { ScopeNumberModels, HeadCategoryModels, GwpModels, categoryScopeModels,dataScopeModels };

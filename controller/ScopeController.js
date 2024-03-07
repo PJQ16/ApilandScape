@@ -2,7 +2,9 @@ const express = require('express');
 const app = express();
 
 const { ScopeNumberModels, HeadCategoryModels, GwpModels, categoryScopeModels, dataScopeModels } = require('../models/categoryScope');
+const {ActivityGHGModel} =require('../models/activityYear');
 const conn = require('../connect/con');
+const { PlaceCmuModels,CampusModels } = require('../models/placeAtCmuModels');
 //APi สำหรับการ แสดงผลลัพท์ของแต่ละ scope แบบแยกตามประเภท Activity 
 app.get('/landscape', async (req, res) => {
     try {
@@ -149,7 +151,7 @@ app.get('/scope/apiShowAll', async (req, res) => {
             include: [
                 {
                     model: HeadCategoryModels,
-                    attributes: ['head_name'],
+                    attributes: ['id','head_name'],
                     include: [
                         {
                             model: categoryScopeModels,
@@ -187,6 +189,56 @@ app.get('/scope/apiShowAll', async (req, res) => {
     }
 });
 
+app.get('/scope/yearData', async (req, res) => {
+  try {
+    const showData = await CampusModels.findAll({
+      attributes: ['id', 'campus_name'],
+      include: [
+        {
+          model: PlaceCmuModels,
+          attributes: ['fac_name'],
+          include: [
+            {
+              model: ActivityGHGModel,
+              attributes: ['years', 'fac_id'],
+              include: [
+                {
+                  model: dataScopeModels,
+                  attributes: [
+                    'name',
+                    'lci',
+                    'quantity',
+                    [eliteral, 'EF'],
+                    'kgCO2e',
+                  ],
+                  include:[
+                    {
+                      model:GwpModels,
+                      attributes:[]
+                    },
+                    {
+                      model:HeadCategoryModels,
+                      attributes:['head_name'],
+                      include:[
+                        {
+                         model:ScopeNumberModels,
+                         attributes:['name']   
+                        }
+                      ]
+                    }
+                  ]
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+      res.status(200).send(showData);
+  } catch (e) {
+      res.status(500).send('Server Error ' + e.message);
+  }
+});
 
 
 app.get('/scope/apiHeadCategoryData1',async(req,res)=>{
@@ -270,7 +322,8 @@ app.post('/scope/addCategoryScope',async(req,res)=>{
 //เพิิ่ม DataScope
 app.post('/scope/addDataScope',async(req,res)=>{
     try{
-      const AddData = await dataScopeModels.create(req.body);
+      const dataScope = req.body;
+      const AddData = await dataScopeModels.bulkCreate(dataScope);
       res.status(200).json(AddData);
     }catch(e){
       res.status(500).json('Error Server' + e.message);
