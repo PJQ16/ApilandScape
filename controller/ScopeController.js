@@ -5,6 +5,9 @@ const { ScopeNumberModels, HeadCategoryModels, GwpModels, categoryScopeModels, d
 const {ActivityGHGModel} =require('../models/activityYear');
 const conn = require('../connect/con');
 const { PlaceCmuModels,CampusModels } = require('../models/placeAtCmuModels');
+
+const eliteral = conn.literal('(CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) + (CH4 * gwp_CH4) + (N2O * gwp_N2O) + (SF6 * gwp_SF6) + (NF3 * gwp_NF3) + (HFCs * GWP_HFCs) + (PFCs * GWP_PFCs)');
+
 //APi สำหรับการ แสดงผลลัพท์ของแต่ละ scope แบบแยกตามประเภท Activity 
 app.get('/landscape', async (req, res) => {
   try {
@@ -194,7 +197,6 @@ app.get('/landscape', async (req, res) => {
 
 
 //แสดง หมวดหมู่ทั้งหมดของ scop1 scope2 scop3 removal separate
-const eliteral = conn.literal('(CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) + (CH4 * gwp_CH4) + (N2O * gwp_N2O) + (SF6 * gwp_SF6) + (NF3 * gwp_NF3) + (HFCs * GWP_HFCs) + (PFCs * GWP_PFCs)');
 
 app.get('/scope/apiShowAll', async (req, res) => {
     try {
