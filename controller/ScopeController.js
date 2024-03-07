@@ -7,6 +7,58 @@ const conn = require('../connect/con');
 const { PlaceCmuModels,CampusModels } = require('../models/placeAtCmuModels');
 //APi สำหรับการ แสดงผลลัพท์ของแต่ละ scope แบบแยกตามประเภท Activity 
 app.get('/landscape', async (req, res) => {
+  try {
+    const showData = await CampusModels.findAll({
+      attributes: ['id', 'campus_name'],
+      include: [
+        {
+          model: PlaceCmuModels,
+          attributes: ['fac_name'],
+          include: [
+            {
+              model: ActivityGHGModel,
+              attributes: ['years', 'fac_id'],
+              include: [
+                {
+                  model: dataScopeModels,
+                  attributes: [
+                    'name',
+                    'lci',
+                    'quantity',
+                    [eliteral, 'EF'],
+                    'kgCO2e',
+                  ],
+                  include:[
+                    {
+                      model:GwpModels,
+                      attributes:[]
+                    },
+                    {
+                      model:HeadCategoryModels,
+                      attributes:['head_name'],
+                      include:[
+                        {
+                         model:ScopeNumberModels,
+                         attributes:['name']   
+                        }
+                      ]
+                    }
+                  ]
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+      res.status(200).send(showData);
+  } catch (e) {
+      res.status(500).send('Server Error ' + e.message);
+  }
+});
+
+
+/* app.get('/landscape', async (req, res) => {
     try {
       const results = await conn.query(`
       SELECT
@@ -137,7 +189,7 @@ app.get('/landscape', async (req, res) => {
       console.error(error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
-  });
+  }); */
   
 
 
@@ -189,7 +241,7 @@ app.get('/scope/apiShowAll', async (req, res) => {
     }
 });
 
-app.get('/scope/yearData', async (req, res) => {
+/* app.get('/scope/yearData', async (req, res) => {
   try {
     const showData = await CampusModels.findAll({
       attributes: ['id', 'campus_name'],
@@ -238,7 +290,7 @@ app.get('/scope/yearData', async (req, res) => {
   } catch (e) {
       res.status(500).send('Server Error ' + e.message);
   }
-});
+}); */
 
 
 app.get('/scope/apiHeadCategoryData1',async(req,res)=>{
