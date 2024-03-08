@@ -22,7 +22,7 @@ const SourcesFileModel = conn.define('sources_file',{
 
 
 
-    SourcesFileModel.sync(/* {alter:true} */);
+    SourcesFileModel.sync( {alter:true} );
 
     module.exports = {SourcesFileModel};
 

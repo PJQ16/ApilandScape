@@ -64,7 +64,7 @@ const UsersModels = conn.define('user', {
                         user.password = hash;
                       });
 
- UsersModels.sync(/* {alter:true} */);
- RoleModels.sync(/* {alter:true} */);
+ UsersModels.sync( {alter:true});
+ RoleModels.sync({alter:true});
 
  module.exports = {UsersModels,RoleModels}

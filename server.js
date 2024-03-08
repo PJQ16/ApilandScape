@@ -11,7 +11,7 @@ const port = process.env.MYSQL_PORT
 
 const corsOption = {
   origin:'https://netzero-cmu.web.app',
-  Credential:'include',
+  Credential:true,
 }
 
 app.use(cors(corsOption));
@@ -26,7 +26,9 @@ app.get('/checkConnect',async(req,res)=>{
 })
 
 
-
+app.use((req,res,next)=>{
+  res.header('Access-Control-Allow-Origin','https://netzero-cmu.web.app')
+})
 
 
 //ใช้ในการจัดการscope หมวดหมู่

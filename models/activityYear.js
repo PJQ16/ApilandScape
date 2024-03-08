@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const conn = require('../connect/con')
-const {PlaceCmuModels} = require('../models/placeAtCmuModels');
+const {PlaceCmuModels, CampusModels} = require('../models/placeAtCmuModels');
  
 const ActivityGHGModel = conn.define('activityperiod',{
     id: {
@@ -20,19 +20,26 @@ const ActivityGHGModel = conn.define('activityperiod',{
         type:DataTypes.DECIMAL(9,2),
         defaultValue:0
     },
+    status_base_year:{
+      type: DataTypes.BOOLEAN,
+      defaultValue:false
+    },
     fac_id:{
         type: DataTypes.STRING(255),
-        allowNull: false
+        allowNull:false
       },
-      status_base_year:{
-        type: DataTypes.BOOLEAN,
-        defaultValue:false
+    campus_id:{
+        type: DataTypes.STRING(255),
+        allowNull:false
       }
 });
 
     PlaceCmuModels.hasMany(ActivityGHGModel,{foreignKey:'fac_id'});
     ActivityGHGModel.belongsTo(PlaceCmuModels,{foreignKey:'fac_id'});
-  
+
+    CampusModels.hasMany(ActivityGHGModel,{foreignKey:'campus_id'});
+    ActivityGHGModel.belongsTo(CampusModels,{foreignKey:'campus_id'});
+
     ActivityGHGModel.sync({alter:true});
 
     module.exports = {ActivityGHGModel};
