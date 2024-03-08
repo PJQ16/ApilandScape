@@ -17,7 +17,7 @@ app.get('/landscape', async (req, res) => {
       include: [
         {
           model: PlaceCmuModels,
-          attributes: ['fac_name'],
+          attributes: ['id','fac_name'],
           include: [
             {
               model: ActivityGHGModel,
@@ -40,12 +40,6 @@ app.get('/landscape', async (req, res) => {
                     {
                       model:HeadCategoryModels,
                       attributes:['head_name'],
-                      include:[
-                        {
-                         model:ScopeNumberModels,
-                         attributes:['name']   
-                        }
-                      ]
                     }
                   ]
                 },
