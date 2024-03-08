@@ -14,7 +14,7 @@ const corsOption = {
   Credential:'include',
 }
 
-app.use(cors(corsOption.json()));
+app.use(cors(corsOption));
 
 app.get('/checkConnect',async(req,res)=>{
     try {
