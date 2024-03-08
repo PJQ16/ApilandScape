@@ -81,7 +81,7 @@ app.post('/users/login', async (req, res) => {
           },
           {
             model: PlaceCmuModels,
-            attributes: ['id','fac_name','campus_id'],
+            attributes: ['id','fac_name','campus_id','latitude','longitude'],
             include: [
               {
                 model: CampusModels,

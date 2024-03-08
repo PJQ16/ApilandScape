@@ -2,13 +2,19 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 const bodyParser = require('body-parser');
-app.use(cors());
+
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }))
 const conn = require('./connect/con');
 require('dotenv').config();
 const port = process.env.MYSQL_PORT
 
+const corsOption = {
+  origin:'https://netzero-cmu.web.app',
+  Credential:'include',
+}
+
+app.use(cors(corsOption.json()));
 
 app.get('/checkConnect',async(req,res)=>{
     try {
@@ -18,6 +24,10 @@ app.get('/checkConnect',async(req,res)=>{
         res.status(500).send('Unable to connect to the database:', error);
       }
 })
+
+
+
+
 
 //ใช้ในการจัดการscope หมวดหมู่
 app.use(require('./controller/ScopeController'));

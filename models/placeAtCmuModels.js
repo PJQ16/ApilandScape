@@ -17,11 +17,11 @@ const PlaceCmuModels = conn.define('faculty', {
     },
     latitude:{
       type:DataTypes.STRING(255),
-      allowNull:false
+      allowNull:true
     },
     longitude:{
       type:DataTypes.STRING(255),
-      allowNull:false
+      defaultValue:true
     }
   });
 

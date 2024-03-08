@@ -8,9 +8,9 @@ const { PlaceCmuModels,CampusModels } = require('../models/placeAtCmuModels');
 
 const eliteral = conn.literal('(CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) + (CH4 * gwp_CH4) + (N2O * gwp_N2O) + (SF6 * gwp_SF6) + (NF3 * gwp_NF3) + (HFCs * GWP_HFCs) + (PFCs * GWP_PFCs)');
 
-const tco2e = conn
+
 //APi สำหรับการ แสดงผลลัพท์ของแต่ละ scope แบบแยกตามประเภท Activity 
-app.get('/landscape', async (req, res) => {
+app.get('/scope/DataScope', async (req, res) => {
   try {
     const showData = await CampusModels.findAll({
       attributes: ['id', 'campus_name'],
@@ -62,7 +62,7 @@ app.get('/landscape', async (req, res) => {
 });
 
 
-/* app.get('/landscape', async (req, res) => {
+ /* app.get('/landscape', async (req, res) => {
     try {
       const results = await conn.query(`
       SELECT
@@ -133,7 +133,7 @@ app.get('/landscape', async (req, res) => {
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });
-
+ */
   app.get('/scope/currentApishow',async(req,res)=>{
     try {
       const current = await conn.query(`SELECT
@@ -193,7 +193,7 @@ app.get('/landscape', async (req, res) => {
       console.error(error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
-  }); */
+  }); 
   
 
 

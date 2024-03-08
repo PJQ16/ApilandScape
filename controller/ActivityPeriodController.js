@@ -14,13 +14,15 @@ app.get('/activity/showPeriod',async(req,res)=>{
     }
 })
 
-app.get('/activity/showPeriod/:fac_id/:years', async (req, res) => {
+app.get('/activity/showPeriod/:fac_id/:years/:employee_amount/:building_area', async (req, res) => {
    try {
-     const { fac_id, years } = req.params;
-     console.log(years);
+     const { fac_id, years,employee_amount,building_area } = req.params;
      const showData = await ActivityGHGModel.findOne({
        where: { fac_id, 
-         years: conn.literal(`years + 543`),  },
+         years: conn.literal(`years + 543`),
+         employee_amount,
+         building_area
+         },
      });
  
      if (!showData) {
@@ -41,4 +43,19 @@ app.post('/activity/AddPeriod',async(req,res)=>{
         res.status(500).json('Server Error ' + e.message);
      }
 })
+
+app.put('/activity/modifyDataPeriod/:id',async(req,res)=>{
+   try{
+      const  ModifyData = await ActivityGHGModel.update({
+         where:{
+            id:req.body.id
+         }
+      });
+
+      res.status(200).json(ModifyData);
+
+   }catch(e){
+      res.status(500).json('Server Error' + e.message);
+   }
+});
 module.exports = app
