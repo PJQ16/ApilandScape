@@ -10,7 +10,7 @@ const eliteral = conn.literal('(CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) +
 
 
 //APi สำหรับการ แสดงผลลัพท์ของแต่ละ scope แบบแยกตามประเภท Activity 
-app.get('/scope/DataScope', async (req, res) => {
+app.get('/landscape', async (req, res) => {
   try {
     const showData = await CampusModels.findAll({
       attributes: ['id', 'campus_name'],
