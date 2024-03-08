@@ -17,7 +17,7 @@ app.get('/landscape', async (req, res) => {
       include: [
         {
           model: PlaceCmuModels,
-          attributes: ['fac_id','fac_name'],
+          attributes: ['id','fac_name'],
           include: [
             {
               model: ActivityGHGModel,
