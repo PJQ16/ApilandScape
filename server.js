@@ -7,15 +7,7 @@ app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: true }))
 const conn = require('./connect/con');
 require('dotenv').config();
-const port = process.env.MYSQL_PORT
-
-app.use(cors());
-/* const corsOption = {
-  origin:'https://netzero-cmu.web.app',
-  Credential:true,
-} 
- */
-
+const port = process.env.MYSQL_PORT-
 app.use((req,res,next)=>{
   res.setHeader('Access-Control-Allow-origin','https://netzero-cmu.web.app');
   res.setHeader('Access-Control-Allow-Methods','GET,POST,PUT,DELETE');
@@ -23,6 +15,15 @@ app.use((req,res,next)=>{
   res.setHeader('Access-Control-Allow-Credentials',true)
   next()
 })
+
+/* app.use(cors()); */
+/* const corsOption = {
+  origin:'https://netzero-cmu.web.app',
+  Credential:true,
+} 
+ */
+
+
 
 app.get('/checkConnect',async(req,res)=>{
     try {
