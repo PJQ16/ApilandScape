@@ -40,8 +40,8 @@ const PlaceCmuModels = conn.define('faculty', {
   CampusModels.hasMany(PlaceCmuModels,{foreignKey:'campus_id'});
   PlaceCmuModels.belongsTo(CampusModels,{foreignKey:'campus_id'});
 
-  CampusModels.sync( {alter:true});
-  PlaceCmuModels.sync( {alter:true});
+  CampusModels.sync(/*  {alter:true} */);
+  PlaceCmuModels.sync( /* {alter:true} */);
 
   module.exports = {CampusModels,PlaceCmuModels}
 

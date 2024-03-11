@@ -40,7 +40,7 @@ const ActivityGHGModel = conn.define('activityperiod',{
     CampusModels.hasMany(ActivityGHGModel,{foreignKey:'campus_id'});
     ActivityGHGModel.belongsTo(CampusModels,{foreignKey:'campus_id'});
 
-    ActivityGHGModel.sync({alter:true});
+    ActivityGHGModel.sync(/* {alter:true} */);
 
     module.exports = {ActivityGHGModel};
 

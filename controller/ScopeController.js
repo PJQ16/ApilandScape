@@ -8,52 +8,75 @@ const { PlaceCmuModels,CampusModels } = require('../models/placeAtCmuModels');
 
 const eliteral = conn.literal('(CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) + (CH4 * gwp_CH4) + (N2O * gwp_N2O) + (SF6 * gwp_SF6) + (NF3 * gwp_NF3) + (HFCs * GWP_HFCs) + (PFCs * GWP_PFCs)');
 
-
 //APi สำหรับการ แสดงผลลัพท์ของแต่ละ scope แบบแยกตามประเภท Activity 
 app.get('/landscape', async (req, res) => {
   try {
-    const showData = await CampusModels.findAll({
-      attributes: ['id', 'campus_name'],
+    let tCO2e;
+    if (conn.literal(('ScopeNumberModels.name' === 'scope1'))) {
+      tCO2e = conn.literal('(quantity * ((CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) + (CH4 * gwp_CH4) + (N2O * gwp_N2O) + (SF6 * gwp_SF6) + (NF3 * gwp_NF3) + (HFCs * GWP_HFCs) + (PFCs * GWP_PFCs)))/1000');
+    } else {
+      tCO2e = conn.literal('(quantity * kgCO2e)/1000');
+    }
+
+    const campuses = await CampusModels.findAll({
+      attributes:['id','campus_name'],
       include: [
         {
           model: PlaceCmuModels,
-          attributes: ['id','fac_name'],
-          include: [
+          attributes:['id','fac_name'],
+          include:[
             {
-              model: ActivityGHGModel,
-              attributes: ['years', 'fac_id'],
-              include: [
+              model:ActivityGHGModel,
+              attributes:['years'],
+              include:[
                 {
-                  model: dataScopeModels,
-                  attributes: [
-                    'name',
-                    'lci',
-                    'quantity',
-                    [eliteral, 'EF'],
-                    'kgCO2e',
-                  ],
+                  model:ScopeNumberModels,
+                  attributes:['name'],
                   include:[
-                    {
-                      model:GwpModels,
-                      attributes:[]
-                    },
                     {
                       model:HeadCategoryModels,
                       attributes:['head_name'],
+                      include:[
+                        {
+                          model:dataScopeModels,
+                          attributes:[
+                            'name',
+                            'quantity',
+                            'lci',
+                            [eliteral, 'EF'],
+                            'kgCO2e',
+                            [tCO2e,'tCO2e']
+                          ],
+                          
+                          include:
+                          [
+                            {
+                              model:GwpModels,
+                              attributes:[]
+                            }
+                          ]
+                        }
+                      ]
                     }
                   ]
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    });
-      res.status(200).send(showData);
-  } catch (e) {
-      res.status(500).send('Server Error ' + e.message);
+                }    
+             
+            ]
+            }
+          ]
+         
+        }
+       
+      ]
+    })
+
+    res.json(campuses);  // ส่งข้อมูลในรูปแบบ JSON ใน response
+  } catch (error) {
+    console.error('Error creating data structure:', error);
+    res.status(500).json({ error: 'Internal Server Error' });  // ส่ง response 500 กรณีเกิด error
   }
 });
+
 
 
  /* app.get('/landscape', async (req, res) => {

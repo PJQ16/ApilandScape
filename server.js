@@ -8,13 +8,13 @@ app.use(bodyParser.urlencoded({ extended: true }))
 const conn = require('./connect/con');
 require('dotenv').config();
 const port = process.env.MYSQL_PORT
-
+/* 
 const corsOption = {
   origin:'https://netzero-cmu.web.app',
   Credential:true,
-} 
+} */
 
-app.use(cors(corsOption));
+app.use(cors(/* corsOption */));
 
 app.get('/checkConnect',async(req,res)=>{
     try {

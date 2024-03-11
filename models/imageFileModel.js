@@ -26,7 +26,7 @@ const ImageFileModel = conn.define('image_file',{
 
 
 
-    ImageFileModel.sync({alter:true});
+    ImageFileModel.sync(/* {alter:true} */);
 
     module.exports = {ImageFileModel};
 

@@ -11,6 +11,10 @@ const {ActivityGHGModel} = require('../models/activityYear')
                       name: {
                         type: DataTypes.STRING(255),
                         allowNull:false
+                      },
+                      activityperiod_id: {
+                        type: DataTypes.INTEGER(11),
+                        allowNull: true
                       }        
                     });
 
@@ -189,6 +193,10 @@ const {ActivityGHGModel} = require('../models/activityYear')
                         type: DataTypes.INTEGER(11), 
                         allowNull: false
                       },
+                      scopenum_id:{
+                        type: DataTypes.INTEGER(11),
+                        allowNull: false
+                      },
                       head_id: {
                         type: DataTypes.INTEGER(11),
                         allowNull: false
@@ -232,13 +240,15 @@ const {ActivityGHGModel} = require('../models/activityYear')
   PlaceCmuModels.hasMany(dataScopeModels,{foreignKey:'fac_id'});
   dataScopeModels.belongsTo(PlaceCmuModels,{foreignKey:'fac_id'});
 
+  ScopeNumberModels.hasMany(dataScopeModels,{foreignKey:'scopenum_id'});
+  dataScopeModels.belongsTo(ScopeNumberModels,{foreignKey:'scopenum_id'});                  
 
-
-
+  ActivityGHGModel.hasMany(ScopeNumberModels, { foreignKey: 'activityperiod_id' });
+  ScopeNumberModels.belongsTo(ActivityGHGModel, { foreignKey: 'activityperiod_id' });
 //เปิดเมื่อยังไม่มีตารางสร้างตาราง
-ScopeNumberModels.sync({ alter: true } ); 
-HeadCategoryModels.sync( { alter: true } );
-GwpModels.sync( { alter: true } ); 
-categoryScopeModels.sync( { alter: true } );  
-dataScopeModels.sync( {alter:true}  );
+ScopeNumberModels.sync( { alter: true }  ); 
+HeadCategoryModels.sync( /* { alter: true } */ );
+GwpModels.sync( /* { alter: true } */ ); 
+categoryScopeModels.sync( /* { alter: true } */ );  
+dataScopeModels.sync( /* {alter:true} */  );
 module.exports = { ScopeNumberModels, HeadCategoryModels, GwpModels, categoryScopeModels,dataScopeModels };
