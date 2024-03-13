@@ -18,6 +18,18 @@ const {ActivityGHGModel} = require('../models/activityYear')
                       }        
                     });
 
+                    const ScopeNumberCateModels = conn.define('catescopenum', {
+                      id: {
+                        type: DataTypes.INTEGER(11),
+                        primaryKey:true,
+                        autoIncrement:true
+                      },
+                      name: {
+                        type: DataTypes.STRING(255),
+                        allowNull:false
+                      },
+                    });
+
                   
                     const GwpModels = conn.define('gwp', {
                       id: {
@@ -212,6 +224,10 @@ const {ActivityGHGModel} = require('../models/activityYear')
                       activityperiod_id:{
                         type: DataTypes.INTEGER(11),
                         allowNull: false
+                      },
+                      month:{
+                        type:DataTypes.INTEGER(2),
+                        allowNull: false
                       }
                     });
 
@@ -246,9 +262,10 @@ const {ActivityGHGModel} = require('../models/activityYear')
   ActivityGHGModel.hasMany(ScopeNumberModels, { foreignKey: 'activityperiod_id' });
   ScopeNumberModels.belongsTo(ActivityGHGModel, { foreignKey: 'activityperiod_id' });
 //เปิดเมื่อยังไม่มีตารางสร้างตาราง
-ScopeNumberModels.sync( { alter: true }  ); 
+ScopeNumberCateModels.sync(/* {alter:true} */);
+ScopeNumberModels.sync( /* { alter: true } */  ); 
 HeadCategoryModels.sync( /* { alter: true } */ );
 GwpModels.sync( /* { alter: true } */ ); 
 categoryScopeModels.sync( /* { alter: true } */ );  
-dataScopeModels.sync( /* {alter:true} */  );
-module.exports = { ScopeNumberModels, HeadCategoryModels, GwpModels, categoryScopeModels,dataScopeModels };
+dataScopeModels.sync(  /* {alter:true}  */ );
+module.exports = { ScopeNumberModels, HeadCategoryModels, GwpModels, categoryScopeModels,dataScopeModels,ScopeNumberCateModels };

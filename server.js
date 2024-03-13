@@ -9,9 +9,9 @@ const conn = require('./connect/con');
 require('dotenv').config();
 const port = process.env.MYSQL_PORT
 
-const corsOption = {
-  origin:'https://netzero-cmu.web.app',
-} 
+ const corsOption = {
+  origin:'https://asia-southeast1-dt-2022-01-digital-twin.cloudfunctions.net/',
+}  
 
 /* app.use((req,res,next)=>{
   res.setHeader('Access-Control-Allow-origin','https://netzero-cmu.web.app');
@@ -21,7 +21,7 @@ const corsOption = {
   next()
 }) */
 
-app.use(cors(corsOption)); 
+app.use(cors( corsOption )); 
 
 
 
