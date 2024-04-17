@@ -2,7 +2,15 @@ const express = require('express')
 const app = express();
 const {CampusModels,PlaceCmuModels} = require('../models/placeAtCmuModels');
 
-app.get('/place/showAllPlace',async(req,res)=>{
+/**
+ * @swagger
+ * /place/showAllPlace:
+ *   get:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Campus and Faculties ]
+*/
+app.get('/place/showCampus',async(req,res)=>{
     try {
         const ShowData = await CampusModels.findAll({
             attributes: [
@@ -27,6 +35,14 @@ app.get('/place/showAllPlace',async(req,res)=>{
     
 });
 
+/**
+ * @swagger
+ * /place/showAllPlace:
+ *   get:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Campus and Faculties ]
+*/
 app.get('/place/showCampus',async(req,res)=>{
     try{
         const ShowData = await CampusModels.findAll();
@@ -36,6 +52,14 @@ app.get('/place/showCampus',async(req,res)=>{
     }
 })
 
+/**
+ * @swagger
+ * /place/showFaculty:
+ *   get:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Campus and Faculties ]
+*/
 app.get('/place/showFaculty',async(req,res)=>{
     try{
         const ShowData = await PlaceCmuModels.findAll();
@@ -44,27 +68,6 @@ app.get('/place/showFaculty',async(req,res)=>{
         res.status(500).json('Error Server ' + e.message);
     }
 })
-
-//เพิ่มหน่วยงาน
-/* app.post('/place/addFaculty',async(req,res)=>{
-    try{
-       const AddData = await PlaceCmuModels.create(req.body);
-
-       res.status(200).json(AddData);
-    }catch(e){
-        res.status(500).json('Server Error ' + e.message);
-    }
-});
- */
-//เพิ่มวิทยาเขต
-/* app.post('/place/addCampus',async(req,res)=>{
-    try{
-        const AddData = await CampusModels.create(req.body);
-        res.status(200).json(AddData);
-    }catch(e){
-        res.status(500).json('Server Error ' + e.message);
-    }
-}); */
 
 
 

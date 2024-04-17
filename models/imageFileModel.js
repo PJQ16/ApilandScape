@@ -21,12 +21,12 @@ const ImageFileModel = conn.define('image_file',{
         allowNull: false
       },
 });
-    ActivityGHGModel.hasMany(ImageFileModel,{foreignKey:'activityperiod_id'});
-    ImageFileModel.belongsTo(ActivityGHGModel,{foreignKey:'activityperiod_id'});
+     ActivityGHGModel.hasMany(ImageFileModel,{foreignKey:'activityperiod_id'});
+    ImageFileModel.belongsTo(ActivityGHGModel,{foreignKey:'activityperiod_id'}); 
+    
 
 
-
-    ImageFileModel.sync(/* {alter:true} */);
+    ImageFileModel.sync( {alter:true} );
 
     module.exports = {ImageFileModel};
 

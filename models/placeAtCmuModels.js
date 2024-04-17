@@ -21,7 +21,7 @@ const PlaceCmuModels = conn.define('faculty', {
     },
     longitude:{
       type:DataTypes.STRING(255),
-      defaultValue:true
+      allowNull:true
     }
   });
 
@@ -36,12 +36,12 @@ const PlaceCmuModels = conn.define('faculty', {
       allowNull:false
     }
   });
-
+ 
   CampusModels.hasMany(PlaceCmuModels,{foreignKey:'campus_id'});
-  PlaceCmuModels.belongsTo(CampusModels,{foreignKey:'campus_id'});
-
-  CampusModels.sync(/*  {alter:true} */);
-  PlaceCmuModels.sync( /* {alter:true} */);
+  PlaceCmuModels.belongsTo(CampusModels,{foreignKey:'campus_id'}); 
+   
+  CampusModels.sync(  {alter:true} );
+  PlaceCmuModels.sync(  {alter:true} );
 
   module.exports = {CampusModels,PlaceCmuModels}
 

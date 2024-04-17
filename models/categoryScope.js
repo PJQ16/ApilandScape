@@ -2,21 +2,7 @@ const { DataTypes } = require('sequelize');
 const conn = require('../connect/con')
 const {CampusModels,PlaceCmuModels} = require('../models/placeAtCmuModels');
 const {ActivityGHGModel} = require('../models/activityYear')
-                  const ScopeNumberModels = conn.define('scopenum', {
-                      id: {
-                        type: DataTypes.INTEGER(11),
-                        primaryKey:true,
-                        autoIncrement:true
-                      },
-                      name: {
-                        type: DataTypes.STRING(255),
-                        allowNull:false
-                      },
-                      activityperiod_id: {
-                        type: DataTypes.INTEGER(11),
-                        allowNull: true
-                      }        
-                    });
+                 
 
                     const ScopeNumberCateModels = conn.define('catescopenum', {
                       id: {
@@ -29,8 +15,7 @@ const {ActivityGHGModel} = require('../models/activityYear')
                         allowNull:false
                       },
                     });
-
-                  
+                    
                     const GwpModels = conn.define('gwp', {
                       id: {
                         type: DataTypes.INTEGER(11),
@@ -136,10 +121,6 @@ const {ActivityGHGModel} = require('../models/activityYear')
                         type: DataTypes.STRING(255),
                         allowNull:false
                       },
-                      GWP_id: {
-                        type: DataTypes.INTEGER(11), 
-                        allowNull: false
-                      },
                       head_id: {
                         type: DataTypes.INTEGER(11),
                         allowNull: false
@@ -158,7 +139,7 @@ const {ActivityGHGModel} = require('../models/activityYear')
                       },
                       quantity:{
                         type: DataTypes.DECIMAL(10,2),
-                        allowNull:true
+                        defaultValue:0
                       },
                       lci: {
                         type: DataTypes.STRING(10),
@@ -205,10 +186,6 @@ const {ActivityGHGModel} = require('../models/activityYear')
                         type: DataTypes.INTEGER(11), 
                         allowNull: false
                       },
-                      scopenum_id:{
-                        type: DataTypes.INTEGER(11),
-                        allowNull: false
-                      },
                       head_id: {
                         type: DataTypes.INTEGER(11),
                         allowNull: false
@@ -230,19 +207,14 @@ const {ActivityGHGModel} = require('../models/activityYear')
                         allowNull: false
                       }
                     });
+ 
 
-
-  ScopeNumberModels.hasMany(HeadCategoryModels, { foreignKey: 'scopenum_id' });
-  HeadCategoryModels.belongsTo(ScopeNumberModels, { foreignKey: 'scopenum_id' });
+  ScopeNumberCateModels.hasMany(HeadCategoryModels, { foreignKey: 'scopenum_id' });
+  HeadCategoryModels.belongsTo(ScopeNumberCateModels, { foreignKey: 'scopenum_id' });
   
   HeadCategoryModels.hasMany(categoryScopeModels, { foreignKey: 'head_id' });
   categoryScopeModels.belongsTo(HeadCategoryModels, { foreignKey: 'head_id' });
   
-  GwpModels.hasMany(categoryScopeModels, { foreignKey: 'GWP_id' });
-  categoryScopeModels.belongsTo(GwpModels, { foreignKey: 'GWP_id' });
-
-  HeadCategoryModels.hasMany(dataScopeModels,{foreignKey:'head_id'});
-  dataScopeModels.belongsTo(HeadCategoryModels,{foreignKey:'head_id'});
 
   GwpModels.hasMany(dataScopeModels,{foreignKey:'GWP_id'});
   dataScopeModels.belongsTo(GwpModels,{foreignKey:'GWP_id'});
@@ -254,18 +226,18 @@ const {ActivityGHGModel} = require('../models/activityYear')
   dataScopeModels.belongsTo(CampusModels,{foreignKey:'campus_id'});
 
   PlaceCmuModels.hasMany(dataScopeModels,{foreignKey:'fac_id'});
-  dataScopeModels.belongsTo(PlaceCmuModels,{foreignKey:'fac_id'});
+  dataScopeModels.belongsTo(PlaceCmuModels,{foreignKey:'fac_id'});         
+  
+  HeadCategoryModels.hasMany(dataScopeModels,{foreignKey:'head_id'});
+  dataScopeModels.belongsTo(HeadCategoryModels,{foreignKey:'head_id'});         
 
-  ScopeNumberModels.hasMany(dataScopeModels,{foreignKey:'scopenum_id'});
-  dataScopeModels.belongsTo(ScopeNumberModels,{foreignKey:'scopenum_id'});                  
+  //test  at relationship of model
 
-  ActivityGHGModel.hasMany(ScopeNumberModels, { foreignKey: 'activityperiod_id' });
-  ScopeNumberModels.belongsTo(ActivityGHGModel, { foreignKey: 'activityperiod_id' });
 //เปิดเมื่อยังไม่มีตารางสร้างตาราง
-ScopeNumberCateModels.sync(/* {alter:true} */);
-ScopeNumberModels.sync( /* { alter: true } */  ); 
-HeadCategoryModels.sync( /* { alter: true } */ );
-GwpModels.sync( /* { alter: true } */ ); 
-categoryScopeModels.sync( /* { alter: true } */ );  
-dataScopeModels.sync(  /* {alter:true}  */ );
-module.exports = { ScopeNumberModels, HeadCategoryModels, GwpModels, categoryScopeModels,dataScopeModels,ScopeNumberCateModels };
+ScopeNumberCateModels.sync( {alter:true} );
+HeadCategoryModels.sync(  { alter: true }  );
+GwpModels.sync(  { alter: true }  ); 
+categoryScopeModels.sync( { alter: true }  );  
+dataScopeModels.sync(   {alter:true}   );
+
+module.exports = {HeadCategoryModels, GwpModels, categoryScopeModels,dataScopeModels,ScopeNumberCateModels };

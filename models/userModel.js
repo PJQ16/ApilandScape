@@ -51,20 +51,20 @@ const UsersModels = conn.define('user', {
                       }
                     
                     });
-
+  
                     RoleModels.hasMany(UsersModels,{foreignKey:'role_id'});
                     UsersModels.belongsTo(RoleModels,{foreignKey:'role_id'});
 
                     PlaceCmuModels.hasMany(UsersModels,{foreignKey:'fac_id'});
-                    UsersModels.belongsTo(PlaceCmuModels,{foreignKey:'fac_id'});
-
+                  UsersModels.belongsTo(PlaceCmuModels,{foreignKey:'fac_id'});   
+  
                     //กำหนดpass word ให้เป็น hash
                     UsersModels.beforeCreate(async (user, options) => {
                         const hash = await bcrypt.hash(user.password, 10);
                         user.password = hash;
                       });
 
- UsersModels.sync( /* {alter:true} */);
- RoleModels.sync(/* {alter:true} */);
+ UsersModels.sync(   /*  {alter:true}  */   );
+ RoleModels.sync(   /*  {alter:true}   */  );
 
  module.exports = {UsersModels,RoleModels}

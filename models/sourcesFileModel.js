@@ -17,12 +17,12 @@ const SourcesFileModel = conn.define('sources_file',{
         allowNull: false
       },
 });
-    dataScopeModels.belongsTo(SourcesFileModel,{foreignKey:'datascope_id'});
-    SourcesFileModel.belongsTo(dataScopeModels,{foreignKey:'datascope_id'});
+      dataScopeModels.belongsTo(SourcesFileModel,{foreignKey:'datascope_id'});
+    SourcesFileModel.belongsTo(dataScopeModels,{foreignKey:'datascope_id'}); 
+ 
+ 
 
-
-
-    SourcesFileModel.sync( /* {alter:true} */ );
+    SourcesFileModel.sync(  {alter:true}  );
 
     module.exports = {SourcesFileModel};
 

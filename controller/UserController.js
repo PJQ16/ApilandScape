@@ -12,6 +12,47 @@ const {RoleModels,UsersModels} = require('../models/userModel');
 const {PlaceCmuModels, CampusModels} = require('../models/placeAtCmuModels');
 
 //เพิ่มข้อมูล
+/**
+ * @swagger
+ * /users/Addrole:
+ *   post:
+ *     summary: Add Role
+ *     description: Add a new role to the database.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               role_name:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successfully added role
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RoleModel'
+ *       500:
+ *         description: Internal Server Error
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     RoleModel:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *         role_name:
+ *           type: string
+ */
+
 app.post('/users/Addrole',async(req,res)=>{
     try{
         const AddData = await RoleModels.create(req.body);
@@ -20,6 +61,73 @@ app.post('/users/Addrole',async(req,res)=>{
         res.status(500).json('Server Error '+ e.message);
     }
 })
+
+/**
+ * @swagger
+ * /users/Addusers:
+ *   post:
+ *     summary: Add User
+ *     description: Add a new user to the database.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fname:
+ *                 type: string
+ *               sname:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               role_id:
+ *                 type: integer
+ *               fac_id:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successfully added user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/UserModel'
+ *       500:
+ *         description: Internal Server Error
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     UserModel:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *         fname:
+ *           type: string
+ *         sname:
+ *           type: string
+ *         email:
+ *           type: string
+ *         password:
+ *           type: string
+ *         role_id:
+ *           type: integer
+ *         fac_id:
+ *           type: string
+ */
+
 app.post('/users/Addusers', async (req, res) => {
     try {
         const { fname, sname, email, password, role_id, fac_id } = req.body;
@@ -37,6 +145,65 @@ app.post('/users/Addusers', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /users/login:
+ *   post:
+ *     summary: User Login
+ *     description: Authenticate user and generate JWT token.
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successfully authenticated user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 token:
+ *                   type: string
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ */
 
 app.post('/users/login', async (req, res) => {
     const { email, password } = req.body;
@@ -69,6 +236,77 @@ app.post('/users/login', async (req, res) => {
 
   
   //แสดงข้อมูลuser และ บทบาท หน่วยงานที่สังกัด
+  /**
+ * @swagger
+ * /users/showUserApi:
+ *   get:
+ *     summary: Show User API
+ *     description: Retrieve user details.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 result:
+ *                   $ref: '#/components/schemas/UserDetails'
+ *                 message:
+ *                   type: string
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     UserDetails:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *         fname:
+ *           type: string
+ *         sname:
+ *           type: string
+ *         email:
+ *           type: string
+ *         role:
+ *           type: object
+ *           properties:
+ *             role_name:
+ *               type: string
+ *         place:
+ *           type: object
+ *           properties:
+ *             id:
+ *               type: integer
+ *             fac_name:
+ *               type: string
+ *             campus:
+ *               type: object
+ *               properties:
+ *                 campus_name:
+ *                   type: string
+ *             latitude:
+ *               type: number
+ *             longitude:
+ *               type: number
+ */
+
   app.get('/users/showUserApi', Service.isLogin, async (req, res) => {
     try {
       const payLoad = jwt.decode(Service.getToken(req));

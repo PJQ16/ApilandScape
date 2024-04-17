@@ -42,10 +42,10 @@ const SignificanceModel = conn.define('significance',{
         allowNull: false
       },
 });
-dataScopeModels.hasMany(SignificanceModel,{foreignKey:'datascope_id'});
-SignificanceModel.belongsTo(dataScopeModels,{foreignKey:'datascope_id'});
-
-SignificanceModel.sync(/* {alter:true} */);
+  dataScopeModels.hasMany(SignificanceModel,{foreignKey:'datascope_id'});
+SignificanceModel.belongsTo(dataScopeModels,{foreignKey:'datascope_id'}); 
+   
+SignificanceModel.sync({alter:true} );
 module.exports = {SignificanceModel};
 
 

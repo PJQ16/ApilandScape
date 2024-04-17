@@ -22,10 +22,10 @@ const UncertaintyModel = conn.define('uncertainty',{
         allowNull: false
       }
 });
-    dataScopeModels.hasMany(UncertaintyModel,{foreignKey:'datascope_id'});
-    UncertaintyModel.belongsTo(dataScopeModels,{foreignKey:'datascope_id'});
-
-    UncertaintyModel.sync(/* {alter:true} */);
+     dataScopeModels.hasMany(UncertaintyModel,{foreignKey:'datascope_id'});
+    UncertaintyModel.belongsTo(dataScopeModels,{foreignKey:'datascope_id'});  
+   
+    UncertaintyModel.sync( {alter:true} );
 
     module.exports = {UncertaintyModel};
 

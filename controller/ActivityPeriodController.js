@@ -1,10 +1,18 @@
 const express = require('express');
 const app = express();
 const { ActivityGHGModel } = require('../models/activityYear');
-const { PlaceCmuModels} = require('../models/placeAtCmuModels')
-const {ScopeNumberCateModels,ScopeNumberModels,categoryScopeModels,dataScopeModels} = require('../models/categoryScope')
+const { PlaceCmuModels, CampusModels} = require('../models/placeAtCmuModels')
+const {ScopeNumberCateModels,ScopeNumberModels,categoryScopeModels,dataScopeModels, HeadCategoryModels, HeadActivityModels} = require('../models/categoryScope')
 const conn = require('../connect/con')
 
+/**
+ * @swagger
+ * /activity:
+ *   get:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Activity Period]
+*/
 app.get('/activity/showPeriod',async(req,res)=>{
     try{
        const ShowData = await ActivityGHGModel.findAll({
@@ -16,6 +24,71 @@ app.get('/activity/showPeriod',async(req,res)=>{
     }
 })
 
+/**
+ * @swagger
+ * /activity/showPeriod/:fac_id:
+ *   get:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Activity Period]
+*/
+//แสดงข้อมููลเวลา กิจกรรม โดยแสดงตาม ตณะ 
+app.get('/activity/showPeriod/:fac_id',async(req,res)=>{
+   try{
+      const ShowData = await ActivityGHGModel.findAll({
+        where:{
+           fac_id:req.params.fac_id
+        },
+        order:[['years','DESC']]
+      });
+      res.status(200).json(ShowData);
+   }catch(e){
+      res.status(500).json('Server Error ' + e.message);
+   }
+})
+
+/**
+ * @swagger
+ * /activity/showPeriod/:fac_id/:years:
+ *   get:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Activity Period]
+*/
+//แสดงข้อมููลหน้าinfo
+app.get('/activity/showPeriod/:fac_id/:years',async(req,res)=>{
+   try{
+      const ShowData = await ActivityGHGModel.findAll({
+         attributes:['id','years','employee_amount','building_area'],
+         where:{
+            fac_id:req.params.fac_id,
+            years:req.params.years
+         },
+         include:[
+            {
+               model:CampusModels,
+               attributes:['campus_name']
+            },
+            {
+               model:PlaceCmuModels,
+               attributes:['fac_name','latitude','longitude']
+            }
+         ]
+      });
+      res.status(200).json(ShowData);
+   }catch(e){
+      res.status(500).json('Server Error ' + e.message);
+   }
+})
+
+/**
+ * @swagger
+ * /activity/showPeriod/:fac_id/:years/:employee_amount/:building_area:
+ *   get:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Activity Period]
+*/
 app.get('/activity/showPeriod/:fac_id/:years/:employee_amount/:building_area', async (req, res) => {
    try {
      const { fac_id, years,employee_amount,building_area } = req.params;
@@ -37,116 +110,161 @@ app.get('/activity/showPeriod/:fac_id/:years/:employee_amount/:building_area', a
    }
  });
 
-app.post('/activity/AddPeriod',async(req,res)=>{
-     try{
-         const Faculties = await PlaceCmuModels.findAll();
-         const Scopenums = await ScopeNumberModels.findAll();
-         const cateScopes = await categoryScopeModels.findAll();
-         const catescopenums = await ScopeNumberCateModels.findAll();
-         
-         const years = req.body;
+/**
+ * @swagger
+ * /activity/AddPeriod:
+ *   post:
+ *     summary: Add period to activity
+ *     description: Add a new period to the activity.
+ *     tags: [Activity Period]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               years:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Success
+ *       500:
+ *         description: Internal Server Error
+ */
+ app.post('/activity/AddPeriod',async(req,res)=>{
+   try{
+       const Faculties = await PlaceCmuModels.findAll();
+       const cateScopes = await categoryScopeModels.findAll();
+       const catescopenums = await ScopeNumberCateModels.findAll();
+       const HeadCategory = await HeadCategoryModels.findAll();
+       const years = req.body;
 
-         catescopenums.map((catescopenum)=>catescopenum.name);
-         Scopenums.map((scopenum)=>scopenum.name)
+      
 
-       
-         //เอาmodel faculty มาลูป -> ตารางactivityperiod
-         const rawDataFalculty =  Faculties.map((faculty)=>{
-            const facultyDataArray = [];
-            facultyDataArray.push(
-            faculty.id,
-            faculty.campus_id,
-            faculty.fac_name
-            )
-            return facultyDataArray;
-         })
+     
+       //เอาmodel faculty มาลูป -> ตารางactivityperiod
+       const rawDataFalculty =  Faculties.map((faculty)=>{
+          const facultyDataArray = [];
+          facultyDataArray.push(
+          faculty.id,
+          faculty.campus_id,
+          faculty.fac_name
+          )
+          return facultyDataArray;
+       })
 
 
-         //นำข้อมูลไปบันทึกลงใน ActivityGHGModel
-         const DataActivityperiodArrays = [];
-         rawDataFalculty.forEach((faculty) => {
-             const facultyData = {
-                 ...years,
-                 fac_id: faculty[0],
-                 faculty: faculty[1]
-             };
-             DataActivityperiodArrays.push(facultyData);
-         });
-        
-         const AddDataActivity = await ActivityGHGModel.bulkCreate(DataActivityperiodArrays).then(()=>{
-         
-            const activityIds = AddDataActivity.map(activity => activity.id);
+       //นำข้อมูลไปบันทึกลงใน ActivityGHGModel
+       const DataActivityperiodArrays = [];
+       rawDataFalculty.forEach((faculty) => {
+           const facultyData = {
+               ...years,
+               fac_id: faculty[0],
+               campus_id: faculty[1]
+           };
+           DataActivityperiodArrays.push(facultyData);
+       });
 
-            const rawDataScopenum =  catescopenums.map((catescopenum) => {
-               const scopenumDataArray = [];
-               AddDataActivity.forEach((activity, index) => { // แก้ไขที่นี่เพื่อใช้ index
-                   scopenumDataArray.push({
-                       name: catescopenum.name,
-                       activityperiod_id: activityIds[index], // ใช้ index ที่ได้จากการรัน forEach ของ AddDataActivity
-                   });
-               });
-               return scopenumDataArray;
-           });
-           
-            
-            
-           const rawDataCateScope = cateScopes.map((cateScope, index) => { // ใช้ flatMap เพื่อลด array 1 มิติ
-            const scopeDataArray = [];
-            rawDataFalculty.forEach((faculty) => {
-                for (let i = 1; i <= 12; i++) {
-                    scopeDataArray.push({
-                        name: cateScope.name,
-                        lci: cateScope.lci,
-                        CO2: cateScope.CO2,
-                        Fossil_CH4: cateScope.Fossil_CH4,
-                        CH4: cateScope.CH4,
-                        N2O: cateScope.N2O,
-                        SF6: cateScope.SF6,
-                        NF3: cateScope.NF3,
-                        HFCs: cateScope.HFCs,
-                        PFCs: cateScope.PFCs,
-                        GWP_HFCs: cateScope.GWP_HFCs,
-                        GWP_PFCs: cateScope.GWP_PFCs,
-                        kgCO2e: cateScope.kgCO2e,
-                        sources: cateScope.sources,
-                        GWP_id: cateScope.GWP_id,
-                        head_id: cateScope.head_id,
-                        fac_id: faculty[0], 
-                        campus_id: faculty[1],
-                        activityperiod_id: activityIds[index], // ใช้ index เพื่อเข้าถึง activityIds
-                        month: i
-                    });
-                }
+         const AddDataActivity = await ActivityGHGModel.bulkCreate(DataActivityperiodArrays);
+
+       /*    const DataScopenum = [];
+        AddDataActivity.forEach((activity) => {
+            catescopenums.forEach((catescopenum) => {
+                DataScopenum.push({
+                    activityperiod_id: activity.id,
+                    name: catescopenum.name,
+                    numscope_id :catescopenum.id
+                });
             });
-            return scopeDataArray;
         });
         
+      const AddScopenumber = await ScopeNumberModels.bulkCreate(DataScopenum);  */
+      
 
-              dataScopeModels.bulkCreate(rawDataCateScope);
-              ScopeNumberModels.bulkCreate(rawDataScopenum);
-
-            console.log('เพิ่มข้อมูลเรียบร้อยแล้ว')
-         }).catch((error)=>{
-             console.error('เกิดข้อผิดพลาดในการเพิ่มข้อมูล',error);
+    /*  const DataHeadActivity= [];
+      AddScopenumber.forEach((scopenum)=>{
+         HeadCategory.forEach((HeadActivity)=>{
+            DataHeadActivity.push({
+               head_name:HeadActivity.head_name,
+               scopenum_id:HeadActivity.scopenum_id,  
+               scopenumactivity_id:scopenum.id
+            })
          })
-        res.status(200).json(AddDataActivity)
-     }catch(e){
-        res.status(500).json('Server Error ' + e.message);
-     }
+      }) 
+
+      const AddHeadActivity = await HeadActivityModels.bulkCreate(DataHeadActivity);   
+      */
+    
+  /*  const bulkDatas = [];
+AddDataActivity.forEach((activity,index) => {
+    const bulkData = cateScopes.flatMap(cateScope => ({
+        name: cateScope.name,
+        lci: cateScope.lci,
+        CO2: cateScope.CO2,
+        Fossil_CH4: cateScope.Fossil_CH4,
+        CH4: cateScope.CH4,
+        N2O: cateScope.N2O,
+        SF6: cateScope.SF6,
+        NF3: cateScope.NF3,
+        HFCs: cateScope.HFCs,
+        PFCs: cateScope.PFCs,
+        GWP_HFCs: cateScope.GWP_HFCs,
+        GWP_PFCs: cateScope.GWP_PFCs,
+        kgCO2e: cateScope.kgCO2e,
+        sources: cateScope.sources,
+        GWP_id: 1,
+        scopenum_id: AddScopenumber[index].id,
+        head_id: cateScope.head_id,
+        fac_id: activity.fac_id,
+        campus_id: activity.campus_id,
+        activityperiod_id: activity.id,
+        month: 1
+    }));
+    bulkDatas.push(bulkData);
+}); */
+
+
+/* // นำ bulkDatas มาเชื่อมต่อเป็นข้อมูลเดียวกัน (flatten) เพื่อส่งค่ากลับ
+const finalBulkData = bulkDatas.flat();
+//ทำงานได้แล้วเหลือ จัดการกับ ขนาดที่จะรับในฐานข้อมูล
+   const createData_scope =  await dataScopeModels.bulkCreate(finalBulkData);
+ res.status(200).json(createData_scope);  */
+
+ res.status(200).json(AddDataActivity);
+   }catch(e){
+      res.status(500).json('Server Error ' + e.message);
+   }
 })
 
+
+/**
+ * @swagger
+ * /activity/modifyDataPeriod/:id:
+ *   put:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Activity Period]
+*/
 app.put('/activity/modifyDataPeriod/:id',async(req,res)=>{
    try{
-      const  ModifyData = await ActivityGHGModel.update({
-         where:{
-            id:req.body.id
-         }
-      });
 
-      res.status(200).json(ModifyData);
+      const id = req.params.id;
+      const { employee_amount, building_area } = req.body;
+   
+      const [updatedRowsCount, updatedRows] = await ActivityGHGModel.update(
+         { employee_amount, building_area },
+         { where: { id } }
+       );
 
-   }catch(e){
-      res.status(500).json('Server Error' + e.message);
-   }
-});
+       if (updatedRowsCount > 0) {
+         res.status(200).json({ message: 'Update successful', updatedRowsCount, updatedRows });
+       } else {
+         res.status(404).json({ message: 'No data found to update' });
+       }
+     } catch (e) {
+       console.error('Error:', e.message);
+       res.status(500).json({ message: 'Server Error', error: e.message });
+     }
+   });
 module.exports = app
