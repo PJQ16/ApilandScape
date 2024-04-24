@@ -71,7 +71,7 @@ app.get('/activity/showPeriod/:fac_id/:years',async(req,res)=>{
             },
             {
                model:PlaceCmuModels,
-               attributes:['fac_name','latitude','longitude']
+               attributes:['fac_name','latitude','longitude','address']
             }
          ]
       });
@@ -267,4 +267,66 @@ app.put('/activity/modifyDataPeriod/:id',async(req,res)=>{
        res.status(500).json({ message: 'Server Error', error: e.message });
      }
    });
+
+//ค้นหา แต่ละปีมาแสดงเป็นตาราง
+app.get('/activityperiod/:years',async(req,res)=>{
+   try{
+         const showData = await CampusModels.findAll(
+            {     
+               attributes:['campus_name'],
+               include:[
+                  {
+                     model:PlaceCmuModels,
+                     attributes:['fac_name'],
+                     include:[
+                        {
+                           model:ActivityGHGModel,
+                              attributes:['id','years','employee_amount','building_area','status_base_year','comment','status_activity'],
+                              where:{
+                                 years:req.params.years
+                              }
+
+                        }
+                     ]
+                  }
+               ]
+               
+            }
+         );
+         res.status(200).json(showData);
+   }catch(e){
+      res.status(500).json('server error ' + e.message);
+   }
+});  
+
+
+//ค้นหาตาม id
+app.get('/activityperiod/info/:id',async(req,res)=>{
+   try{
+         const showData = await PlaceCmuModels.findAll(
+            {  
+                     include:[
+                        {
+                           model:ActivityGHGModel,
+                              attributes:['id','years','employee_amount','building_area','status_base_year','comment','status_activity'],
+                              where:{
+                                 id:req.params.id
+                              }
+
+                        },
+                        {
+                           model:CampusModels,
+                           attributes:['id','campus_name'],
+                          
+                        }
+                     ]
+                  }
+         );
+         res.status(200).json(showData);
+   }catch(e){
+      res.status(500).json('server error ' + e.message);
+   }
+});  
+
+
 module.exports = app

@@ -10,7 +10,7 @@ const {CampusModels,PlaceCmuModels} = require('../models/placeAtCmuModels');
  *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
  *     tags: [Campus and Faculties ]
 */
-app.get('/place/showCampus',async(req,res)=>{
+app.get('/place/showAllPlace',async(req,res)=>{
     try {
         const ShowData = await CampusModels.findAll({
             attributes: [
@@ -26,6 +26,21 @@ app.get('/place/showCampus',async(req,res)=>{
                     ],
                 }
             ]
+        });
+    
+        res.json(ShowData); // Add this line to send the response
+    } catch (e) {
+        res.status(500).json(e.message);
+    }
+    
+});
+
+app.get('/place/showCampus/:id',async(req,res)=>{
+    try {
+        const ShowData = await PlaceCmuModels.findAll({
+            where:{
+                campus_id:req.params.id
+            }
         });
     
         res.json(ShowData); // Add this line to send the response
@@ -67,7 +82,7 @@ app.get('/place/showFaculty',async(req,res)=>{
     }catch(e){
         res.status(500).json('Error Server ' + e.message);
     }
-})
+});
 
 
 

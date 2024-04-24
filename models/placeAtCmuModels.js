@@ -22,7 +22,19 @@ const PlaceCmuModels = conn.define('faculty', {
     longitude:{
       type:DataTypes.STRING(255),
       allowNull:true
-    }
+    },
+    address:{
+      type:DataTypes.STRING(255),
+      allowNull:true
+    },
+    logo:{
+      type:DataTypes.STRING(255),
+      allowNull:true
+    },
+    status_activity:{
+      type:DataTypes.CHAR(1),
+      defaultValue:0
+    },
   });
 
   const CampusModels = conn.define('campus', {
@@ -34,7 +46,11 @@ const PlaceCmuModels = conn.define('faculty', {
     campus_name: {
       type: DataTypes.STRING(255),
       allowNull:false
-    }
+    },
+    status_activity:{
+      type:DataTypes.CHAR(1),
+      defaultValue:0
+    },
   });
  
   CampusModels.hasMany(PlaceCmuModels,{foreignKey:'campus_id'});

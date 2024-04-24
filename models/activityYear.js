@@ -32,6 +32,10 @@ const ActivityGHGModel = conn.define('activityperiod',{
         type: DataTypes.STRING(255),
         allowNull:false
       },
+      comment:{
+        type: DataTypes.TEXT,
+        allowNull:true
+      },
       status_activity:{
         type: DataTypes.CHAR(1),
         defaultValue:0

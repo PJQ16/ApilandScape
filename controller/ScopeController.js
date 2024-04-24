@@ -6,7 +6,7 @@ const {ActivityGHGModel} =require('../models/activityYear');
 const {ReportModel} =require('../models/reportModel');
 const conn = require('../connect/con');
 const { PlaceCmuModels,CampusModels } = require('../models/placeAtCmuModels');
-
+const { QueryTypes } = require('sequelize');
 const eliteral = conn.literal('(CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) + (CH4 * gwp_CH4) + (N2O * gwp_N2O) + (SF6 * gwp_SF6) + (NF3 * gwp_NF3) + (HFCs * GWP_HFCs) + (PFCs * GWP_PFCs)');
 
 /**
@@ -19,67 +19,147 @@ const eliteral = conn.literal('(CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) +
 */
 app.get('/landscape', async (req, res) => {
   try {
-    const showscopes = await ScopeNumberCateModels.findAll();
-    const result = [];
+    const query = `
+        SELECT 
+            campuses.id AS campus_id,
+            campus_name,
+            faculties.id AS fac_id,
+            fac_name,
+            years,
+            catescopenums.name AS scope_name,
+            headcategories.id as head_id,
+            headcategories.head_name,
+            data_scopes.name,
+            lci,
+            SUM((quantity * (
+                            (kgCO2e)  +
+                            (CO2 * gwp_CO2) + 
+                            (Fossil_CH4 * gwp_Fossil_CH4) + 
+                            (CH4 * gwp_CH4) + 
+                            (N2O * gwp_N2O) + 
+                            (SF6 * gwp_SF6) + 
+                            (NF3 * gwp_NF3) + 
+                            (HFCs * GWP_HFCs) + 
+                            (PFCs * GWP_PFCs)
+                          )) / 1000) AS tCO2e
+        FROM 
+            data_scopes 
+            INNER JOIN activityperiods ON data_scopes.activityperiod_id = activityperiods.id 
+            INNER JOIN gwps ON data_scopes.GWP_id = gwps.id  
+            INNER JOIN faculties ON activityperiods.fac_id = faculties.id
+            INNER JOIN campuses ON faculties.campus_id = campuses.id
+            INNER JOIN headcategories ON data_scopes.head_id = headcategories.id
+            INNER JOIN catescopenums ON headcategories.scopenum_id = catescopenums.id
+        GROUP BY
+            campus_id,
+            fac_id,
+            activityperiods.id,
+            years,
+            catescopenums.name,
+            headcategories.head_name,
+            data_scopes.name,
+            lci`;
 
-    for (const item of showscopes) {
-      let tCO2e;
-      const scopeName = item.id;
+    const data = await conn.query(query, { type: QueryTypes.SELECT });
 
-      // คำนวณ tCO2e ตามเงื่อนไขโดยใช้ SQL expression ในการคำนวณโดยตรงใน query
-      const scopeData = await ScopeNumberCateModels.findAll({
-        attributes: ['name'],
-        include: [
-          {
-            model: HeadCategoryModels,
-            attributes: ['head_name'],
-            include: [
-              {
-                model: dataScopeModels,
-                attributes: [
-                  'id',
-                  'name',
-                  'lci',
-                  'quantity',
-                  [eliteral, 'EF'],
-                  'kgCO2e',
-                  [
-                    conn.literal(`(quantity * (
-                      (kgCO2e)  +
-                      (CO2 * gwp_CO2) + 
-                      (Fossil_CH4 * gwp_Fossil_CH4) + 
-                      (CH4 * gwp_CH4) + 
-                      (N2O * gwp_N2O) + 
-                      (SF6 * gwp_SF6) + 
-                      (NF3 * gwp_NF3) + 
-                      (HFCs * GWP_HFCs) + 
-                      (PFCs * GWP_PFCs)
-                    )) / 1000`),
-                    'tco2e'
-                  ],
-                  'month'
-                ],
-                include: [
-                  {
-                    model: GwpModels,
-                    attributes: [] // เลือกไม่ใช้ attributes จาก GwpModels
-                  }
+    const formattedData = [];
+    let currentCampusId = null;
+    let currentFacId = null;
+    let currentActivityPeriodId = null;
+    let campus = null;
+    let faculty = null;
+    let activityPeriod = null;
+
+    data.forEach(item => {
+        if (item.campus_id !== currentCampusId) {
+            currentCampusId = item.campus_id;
+            campus = {
+                id: currentCampusId,
+                campus_name: item.campus_name,
+                faculties: []
+            };
+            formattedData.push(campus);
+            currentFacId = null;
+        }
+
+        if (item.fac_id !== currentFacId) {
+            currentFacId = item.fac_id;
+            faculty = {
+                id: currentFacId,
+                fac_name: item.fac_name,
+                activityperiods: []
+            };
+            campus.faculties.push(faculty);
+            currentActivityPeriodId = null;
+        }
+
+        if (item.years !== currentActivityPeriodId) {
+            currentActivityPeriodId = item.years;
+            activityPeriod = {
+                years: item.years,
+                scopenums: []
+            };
+            faculty.activityperiods.push(activityPeriod);
+        }
+
+        const scopeIndex = activityPeriod.scopenums.findIndex(scope => scope.name === item.scope_name);
+        if (scopeIndex === -1) {
+            activityPeriod.scopenums.push({
+                name: item.scope_name,
+                headcategories: [
+                    {
+                        head_id: item.head_id,
+                        head_name: item.head_name,
+                       
+                        data_scopes: [
+                            {
+                                name: item.name,
+                                lci: item.lci,
+                                tCO2e: item.tCO2e
+                            }
+                        ]
+                    }
                 ]
-              }
-            ]
-          }
-        ]
-      });
+            });
+        } else {
+            const headIndex = activityPeriod.scopenums[scopeIndex].headcategories.findIndex(head => head.head_name === item.head_name);
+            if (headIndex === -1) {
+                activityPeriod.scopenums[scopeIndex].headcategories.push({
+                    head_id: item.head_id,
+                    head_name: item.head_name,
+                    data_scopes: [
+                        {
+                            name: item.name,
+                            lci: item.lci,
+                            tCO2e: item.tCO2e
+                        }
+                    ]
+                });
+            } else {
+                activityPeriod.scopenums[scopeIndex].headcategories[headIndex].data_scopes.push({
+                    name: item.name,
+                    lci: item.lci,
+                    tCO2e: item.tCO2e
+                });
+            }
+        }
+    });
 
-      // เพิ่มข้อมูลลงใน result
-      result.push(scopeData);
-    }
+    // เรียงลำดับ headcategories ตาม head_id จากน้อยไปมาก
+    formattedData.forEach(campus => {
+        campus.faculties.forEach(faculty => {
+            faculty.activityperiods.forEach(activityPeriod => {
+                activityPeriod.scopenums.forEach(scope => {
+                    scope.headcategories.sort((a, b) => a.head_id - b.head_id);
+                });
+            });
+        });
+    });
 
-    res.json(result);
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
+    res.status(200).json(formattedData);
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
 });
 
 //แสดงข้อมูล หน้าการกรอกข้อมูล 
@@ -362,7 +442,7 @@ app.get('/datascope/summary/:years/:id', async (req, res) => {
 */
 app.get('/scope/apiShowAll', async (req, res) => {
     try {
-        const showData = await ScopeNumberModels.findAll({
+        const showData = await categoryScopeModels.findAll({
             attributes: ['id','name'],
             include: [
                 {
@@ -941,5 +1021,52 @@ app.post('/report/generateRport', Image, async (req, res) => {
       res.status(500).json('Server Error '+ e.message)
   }
 });
+
+
+app.get('/scope',async(req,res)=>{
+  try{
+    const ShowData = await ScopeNumberCateModels.findAll()
+
+    res.status(200).json(ShowData);
+
+  }catch(e){
+    res.status(500).json('Server Error ' + e.message);
+  }
+});
+
+app.get('/headscope/:id',async(req,res)=>{
+  try{
+    const ShowData = await HeadCategoryModels.findAll({
+      where:{
+        scopenum_id:req.params.id
+      }
+    }
+    )
+
+    res.status(200).json(ShowData);
+
+  }catch(e){
+    res.status(500).json('Server Error ' + e.message);
+  }
+})
+
+app.get('/categoryScope/:head_id',async(req,res)=>{
+  try{
+    const ShowData = await categoryScopeModels.findAll(
+      {
+        attributes:['name','lci','CO2','Fossil_CH4','CH4','N2O','SF6','NF3','HFCs','PFCs','GWP_HFCs','GWP_PFCs','kgCO2e','sources'],
+        where:{
+          head_id:req.params.head_id
+        }
+      }
+    )
+
+    res.status(200).json(ShowData);
+
+  }catch(e){
+    res.status(500).json('Server Error ' + e.message);
+  }
+})
+
 
 module.exports = app;

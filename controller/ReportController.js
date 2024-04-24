@@ -4,9 +4,13 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const conn = require('../connect/con');
 const {ReportModel} =  require('../models/reportModel');
-const {dataScopeModels} = require('../models/categoryScope')
+const {dataScopeModels, GwpModels, HeadCategoryModels} = require('../models/categoryScope')
 const { drawTable } = require('pdfkit-table');
 const { QueryTypes } = require('sequelize');
+const { CampusModels, PlaceCmuModels } = require('../models/placeAtCmuModels');
+const { ActivityGHGModel } = require('../models/activityYear');
+const { ImageFileModel } = require('../models/imageFileModel');
+const striptags = require('striptags');
 
 const eliteral = conn.literal('(CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) + (CH4 * gwp_CH4) + (N2O * gwp_N2O) + (SF6 * gwp_SF6) + (NF3 * gwp_NF3) + (HFCs * GWP_HFCs) + (PFCs * GWP_PFCs)');
 
@@ -479,7 +483,7 @@ app.get('/report/dipictDataReport/:id',async(req,res)=>{
  *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
  *     tags: [Report]
 */
-app.get('/generate-pdf', (req, res) => {
+app.get('/generate-pdf', async(req, res) => {
 
     const doc = new PDFDocument({ size: 'a4' });
 
@@ -498,26 +502,84 @@ app.get('/generate-pdf', (req, res) => {
     doc.fontSize(32).text('ขององค์กร', { align: 'center', y: 0, bold: true });
 
     // กำหนดขอบของกรอบรูป
-    doc.rect(40, 160, 530, 300).stroke();
 
+    const ShowData = await CampusModels.findAll(
+        {
+            attributes:['id','campus_name'],
+            where:{
+                id:'MH'
+            },
+            include:[
+                {
+                    model:PlaceCmuModels,
+                    attributes:['id','fac_name'],
+                    where:{
+                        id:'MH2009'
+                    },
+                    include:[
+                        {
+                            model:ActivityGHGModel,
+                            attributes:['years'],
+                            where:{
+                                years:2023
+                            },
+                            include:[
+                                {
+                                    model:ImageFileModel,
+                                    attributes:['type_fr','file_name']
+                                },
+                                {
+                                    model:ReportModel,
+                                    attributes:['intro','tester','coordinator','responsible','monitor','assurance','materially','explanation','cfo_operation1','cfo_operation2','cfo_operation3','image_name']
+
+                                }
+                                
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    )
+    const today = new Date();
+
+    const result = today.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+
+    ShowData.forEach((item) =>{
+        item.faculties.forEach((fac) =>{
+            fac.activityperiods.forEach(period => {
+                period.reports.forEach((report) =>{
     // เพิ่มข้อความรูปภาพอยู่ในกรอบรูป
-    doc.fontSize(12).text('รูปภาพอยู่ในกรอบรูป', 300, 300);
+    doc.image(`images/${report.image_name}`, {
+        fit: [530, 300], // Fit the image into the specified dimensions
+        align: 'center', // Align the image to the center of the rectangle
+        valign: 'center', // Vertically align the image to the center of the rectangle
+        x: 40, // X-coordinate of the image
+        y: 160 // Y-coordinate of the image
+    });
 
     doc.fontSize(22).text('ชื่อองค์กร:', 50, 490);
-    doc.fontSize(20).text('abc', 110, 492);
+    doc.fontSize(20).text(`${fac.fac_name}`, 110, 492);
 
     doc.fontSize(22).text('ที่อยู่:', 50, 520);
-    doc.fontSize(20).text('abc', 80, 522);
+    doc.fontSize(20).text(`${item.campus_name} `, 80, 522);
 
     doc.fontSize(22).text('วันที่รายงานผล:', 50, 550);
-    doc.fontSize(20).text('abc', 145, 552);
+    doc.fontSize(20).text(`${result}`, 145, 552);
 
     doc.fontSize(22).text('ระยะในการติดตามผล:', 50, 580);
-    doc.fontSize(20).text('1 ม.ค. -  31 ธ.ค.', 180, 582);
+    doc.fontSize(20).text(`1 ม.ค. ${period.years + 543}  -  31 ธ.ค.  ${period.years + 543} `, 180, 582);
 
     doc.fontSize(27).text('เพื่อการทวนสอบและรับรองผลคาร์บอนฟุตพริ้นท์ขององค์กร',100, 640);
     doc.fontSize(26).text(' โดย องค์การบริหารจัดการก๊าซเรือนกระจก (องค์การมหาชน)',100, 670);
-
+    });
+    });
+});
+})
     // เพิ่มหน้าใหม่ที่นี่
     //หน้าแรก
     doc.addPage();   
@@ -562,6 +624,10 @@ app.get('/generate-pdf', (req, res) => {
     }
     
     function drawHeader(doc, tableTop, tableLeft, spaceDistance) {
+        ShowData.forEach((item) =>{
+            item.faculties.forEach((fac) =>{
+                fac.activityperiods.forEach(period => {
+                    period.reports.forEach((report)=>{
         doc.rect(tableLeft, tableTop, columnWidth1, lineHeight).stroke(headerColor);
         doc.fontSize(16).text('รายงานการปล่อยและดูดกลับก๊าซเรือนกระจกขององค์กร', tableLeft, tableTop, { width: columnWidth1, align: 'center' });
     
@@ -572,7 +638,7 @@ app.get('/generate-pdf', (req, res) => {
         doc.fontSize(10).text('องค์กร', tableLeft3, tableTop3, { width: columnWidth3, align: 'center' });
     
         doc.rect(tableLeft3 + columnWidth3, tableTop3, columnWidth3, lineHeight).stroke(headerColor);
-        doc.fontSize(10).text('ปป', tableLeft3 + columnWidth3, tableTop3, { width: columnWidth3, align: 'center' });
+        doc.fontSize(10).text(`${fac.fac_name}`, tableLeft3 + columnWidth3, tableTop3, { width: columnWidth3, align: 'center' });
     
         doc.rect(tableLeft3 + (columnWidth3 * 2), tableTop3, columnWidth3, lineHeight).stroke(headerColor);
         doc.fontSize(10).text('หน้าที่', tableLeft3 + (columnWidth3 * 2), tableTop3, { width: columnWidth3, align: 'center' });
@@ -581,10 +647,14 @@ app.get('/generate-pdf', (req, res) => {
         doc.fontSize(10).text('หน่วยงานทดสอบ', tableLeft4, tableTop4, { width: columnWidth4, align: 'center' });
     
         doc.rect(tableLeft4 + columnWidth4, tableTop4, columnWidth4, lineHeight).stroke(headerColor);
-        doc.fontSize(10).text('ปป', tableLeft4 + columnWidth4, tableTop4, { width: columnWidth3, align: 'center' });
+        doc.fontSize(10).text(`${report.tester}`, tableLeft4 + columnWidth4, tableTop4, { width: columnWidth3, align: 'center' });
     
         doc.rect(tableLeft4 + (columnWidth4 * 2), tableTop4, columnWidth4, lineHeight).stroke(headerColor);
         doc.fontSize(10).text('', tableLeft4 + (columnWidth4 * 2), tableTop4, { width: columnWidth4, align: 'center' });
+    });
+});
+});
+});
     }
     
     function drawContent(doc, tableTop, tableLeft, spaceDistance) {
@@ -599,27 +669,144 @@ app.get('/generate-pdf', (req, res) => {
     // เรียกใช้ฟังก์ชันสร้างตาราง
     createTable(doc, tableTop, tableLeft);   
 //จบหัวตาราง 
-    doc.fontSize(22).text('1.บทนำ', 20, 100);
-    doc.fontSize(16).text(`Lorem Ipsum คือ เนื้อหาจำลองแบบเรียบๆ ที่ใช้กันในธุรกิจงานพิมพ์หรืองานเรียงพิมพ์ มันได้กลายมาเป็นเนื้อหาจำลองมาตรฐานของธุรกิจดังกล่าวมาตั้งแต่ศตวรรษที่ 16 เมื่อเครื่องพิมพ์โนเนมเครื่องหนึ่งนำรางตัวพิมพ์มาสลับสับตำแหน่งตัวอักษรเพื่อทำหนังสือตัวอย่าง Lorem Ipsum อยู่ยงคงกระพันมาไม่ใช่แค่เพียงห้าศตวรรษ แต่อยู่มาจนถึงยุคที่พลิกโฉมเข้าสู่งานเรียงพิมพ์ด้วยวิธีทางอิเล็กทรอนิกส์ และยังคงสภาพเดิมไว้อย่างไม่มีการเปลี่ยนแปลง มันได้รับความนิยมมากขึ้นในยุค ค.ศ. 1960 เมื่อแผ่น Letraset วางจำหน่ายโดยมีข้อความบนนั้นเป็น Lorem Ipsum และล่าสุดกว่านั้น คือเมื่อซอฟท์แวร์การทำสื่อสิ่งพิมพ์ (Desktop Publishing) อย่าง Aldus PageMaker ได้รวมเอา Lorem Ipsum เวอร์ชั่นต่างๆ เข้าไว้ในซอฟท์แวร์ด้วย มีหลักฐานที่เป็นข้อเท็จจริงยืนยันมานานแล้ว ว่าเนื้อหาที่อ่านรู้เรื่องนั้นจะไปกวนสมาธิของคนอ่านให้เขวไปจากส่วนที้เป็น Layout เรานำ Lorem Ipsum มาใช้เพราะความที่มันมีการกระจายของตัวอักษรธรรมดาๆ แบบพอประมาณ ซึ่งเอามาใช้แทนการเขียนว่า ‘ตรงนี้เป็นเนื้อหา, ตรงนี้เป็นเนื้อหา' ได้ และยังทำให้มองดูเหมือนกับภาษาอังกฤษที่อ่านได้ปกติ ปัจจุบันมีแพ็กเกจของซอฟท์แวร์การทำสื่อสิ่งพิมพ์ และซอฟท์แวร์การสร้างเว็บเพจ (Web Page Editor) หลายตัวที่ใช้ Lorem Ipsum เป็นแบบจำลองเนื้อหาที่เป็นค่าตั้งต้น และเวลาที่เสิร์ชด้วยคำว่า 'lorem ipsum' ผลการเสิร์ชที่ได้ก็จะไม่พบบรรดาเว็บไซต์ที่ยังคงอยู่ในช่วงเริ่มสร้างด้วย โดยหลายปีที่ผ่านมาก็มีการคิดค้นเวอร์ชั่นต่างๆ ของ Lorem Ipsum ขึ้นมาใช้ บ้างก็เป็นความบังเอิญ บ้างก็เป็นความตั้งใจ (เช่น การแอบแทรกมุกตลก)`);
+doc.fontSize(22).text('1.บทนำ', 20, 100);
 
-    doc.fontSize(22).text('2.ข้อมูลทั่วไป',{ bold:true});
-        doc.fontSize(16).text(`Lorem Ipsum คือ เนื้อหาจำลองแบบเรียบๆ ที่ใช้กันในธุรกิจงานพิมพ์หรืองานเรียงพิมพ์ มันได้กลายมาเป็นเนื้อหาจำลองมาตรฐานของธุรกิจดังกล่าวมาตั้งแต่ศตวรรษที่ 16 เมื่อเครื่องพิมพ์โนเนมเครื่องหนึ่งนำรางตัวพิมพ์มาสลับสับตำแหน่งตัวอักษรเพื่อทำหนังสือตัวอย่าง Lorem Ipsum อยู่ยงคงกระพันมาไม่ใช่แค่เพียงห้าศตวรรษ แต่อยู่มาจนถึงยุคที่พลิกโฉมเข้าสู่งานเรียงพิมพ์ด้วยวิธีทางอิเล็กทรอนิกส์ และยังคงสภาพเดิมไว้อย่างไม่มีการเปลี่ยนแปลง มันได้รับความนิยมมากขึ้นในยุค ค.ศ. 1960 เมื่อแผ่น Letraset วางจำหน่ายโดยมีข้อความบนนั้นเป็น Lorem Ipsum และล่าสุดกว่านั้น คือเมื่อซอฟท์แวร์การทำสื่อสิ่งพิมพ์ (Desktop Publishing) อย่าง Aldus PageMaker ได้รวมเอา Lorem Ipsum เวอร์ชั่นต่างๆ เข้าไว้ในซอฟท์แวร์ด้วย มีหลักฐานที่เป็นข้อเท็จจริงยืนยันมานานแล้ว ว่าเนื้อหาที่อ่านรู้เรื่องนั้นจะไปกวนสมาธิของคนอ่านให้เขวไปจากส่วนที้เป็น Layout เรานำ Lorem Ipsum มาใช้เพราะความที่มันมีการกระจายของตัวอักษรธรรมดาๆ แบบพอประมาณ ซึ่งเอามาใช้แทนการเขียนว่า ‘ตรงนี้เป็นเนื้อหา, ตรงนี้เป็นเนื้อหา' ได้ และยังทำให้มองดูเหมือนกับภาษาอังกฤษที่อ่านได้ปกติ ปัจจุบันมีแพ็กเกจของซอฟท์แวร์การทำสื่อสิ่งพิมพ์ และซอฟท์แวร์การสร้างเว็บเพจ (Web Page Editor) หลายตัวที่ใช้ Lorem Ipsum เป็นแบบจำลองเนื้อหาที่เป็นค่าตั้งต้น และเวลาที่เสิร์ชด้วยคำว่า 'lorem ipsum' ผลการเสิร์ชที่ได้ก็จะไม่พบบรรดาเว็บไซต์ที่ยังคงอยู่ในช่วงเริ่มสร้างด้วย โดยหลายปีที่ผ่านมาก็มีการคิดค้นเวอร์ชั่นต่างๆ ของ Lorem Ipsum ขึ้นมาใช้ บ้างก็เป็นความบังเอิญ บ้างก็เป็นความตั้งใจ (เช่น การแอบแทรกมุกตลก) ตรงกันข้ามกับความเชื่อที่นิยมกัน Lorem Ipsum ไม่ได้เป็นเพียงแค่ชุดตัวอักษรที่สุ่มขึ้นมามั่วๆ แต่หากมีที่มาจากวรรณกรรมละตินคลาสสิกชิ้นหนึ่งในยุค 45 ปีก่อนคริสตศักราช ทำให้มันมีอายุถึงกว่า 2000 ปีเลยทีเดียว ริชาร์ด แมคคลินท็อค ศาสตราจารย์ชาวละติน จากวิทยาลัยแฮมพ์เด็น-ซิดนีย์ ในรัฐเวอร์จิเนียร์ นำคำภาษาละตินคำว่า consectetur ซึ่งหาคำแปลไม่ได้จาก Lorem Ipsum ตอนหนึ่งมาค้นเพิ่มเติม โดยตรวจเทียบกับแหล่งอ้างอิงต่างๆ ในวรรณกรรมคลาสสิก และค้นพบแหล่งข้อมูลที่ไร้ข้อกังขาว่า Lorem Ipsum นั้นมาจากตอนที่ 1.10.32 และ 1.10.33 ของเรื่อง "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) ของ ซิเซโร ที่แต่งไว้เมื่อ 45 ปีก่อนคริสตศักราช หนังสือเล่มนี้เป็นเรื่องราวที่ว่าด้วยทฤษฎีแห่งจริยศาสตร์ ซึ่งเป็นที่นิยมมากในยุคเรเนสซองส์ บรรทัดแรกของ Lorem Ipsum "Lorem ipsum dolor sit amet.." ก็มาจากบรรทัดหนึ่งในตอนที่ 1.10.32 นั่นเอง`);
+// Iterate through ShowData and draw the reports
+ShowData.forEach((item) => {
+    item.faculties.forEach((fac) => {
+        fac.activityperiods.forEach(period => {
+            period.reports.forEach((report) => {
+                const cleanIntro = striptags(report.intro);
+                doc.fontSize(16).text(cleanIntro);
+            });
+        });
+    });
+});
+
+// Move to the position for the second section and draw the title
+doc.moveTo(20, doc.y + 20); // Move cursor to the position for the next section
+doc.addPage(); // Add a new page if needed
+doc.fontSize(22).text('2.ข้อมูลทั่วไป', { bold: true });
+
+// Constants for the table
+const columnWidths = 250; // Width of each column
+const lineHeights = 20; // Height of each row
+const headerColors = '#000000'; // Header color
+
+// Function to draw a cell in the table
+function drawCell(x, y, width, text) {
+    doc.rect(x, y, width, lineHeights).stroke(headerColors);
+    doc.fontSize(16).text(text, x + 5, y + 5);
+}
+
+// Draw the table using repeated code with adjusted X positions for adjacent cells
+const cellSpacing = 10; // Spacing between cells
+ShowData.forEach((item) => {
+    item.faculties.forEach((fac) => {
+        fac.activityperiods.forEach(period => {
+            period.reports.forEach((report) => {
+drawCell(50, 150, columnWidths, '2.1 ชื่อองค์กร');
+drawCell(40 + columnWidths + cellSpacing, 150, columnWidths,  `${fac.fac_name}`);
+
+drawCell(50, 150 + lineHeights, columnWidths, '2.2 ที่อยู่ / สถานที่ตั้งองค์กร');
+drawCell(40 + columnWidths + cellSpacing, 150 + lineHeights, columnWidths, `${item.campus_name} ${fac.fac_name}`);
+
+drawCell(50, 150 + lineHeights * 2, columnWidths, '2.3 ประเภทของอุตสาหกรรม ');
+drawCell(40 + columnWidths + cellSpacing, 150 + lineHeights * 2, columnWidths, `สถานศึกษา`);
+
+drawCell(50, 150 + lineHeights * 3, columnWidths, '2.4 ชื่อ-สกุลของผู้ประสานงาน ');
+drawCell(40 + columnWidths + cellSpacing, 150 + lineHeights * 3, columnWidths, `${report.coordinator}`);
+
+drawCell(50, 150 + lineHeights * 4, columnWidths, '2.5 ชื่อ-สกุลของผู้รับผิดชอบข้อมูล ');
+drawCell(40 + columnWidths + cellSpacing, 150 + lineHeights * 4, columnWidths, `${report.responsible}`);
+
+drawCell(50, 150 + lineHeights * 5, columnWidths, '2.6 ระยะเวลาติดตามผล');
+drawCell(40 + columnWidths + cellSpacing, 150 + lineHeights * 5, columnWidths, `1 ม.ค. ${period.years + 543} - 31 ธ.ค. ${period.years + 543}`);
+
+drawCell(50, 150 + lineHeights * 6, columnWidths, '2.7 แนวทางที่ใช้ในการติดตามผล ');
+drawCell(40 + columnWidths + cellSpacing, 150 + lineHeights * 6, columnWidths, `${report.monitor}`);
+
+drawCell(50, 150 + lineHeights * 7, columnWidths, '2.8 ระดับของการรับรอง (Level of Assurance)');
+drawCell(40 + columnWidths + cellSpacing, 150 + lineHeights * 7, columnWidths, `${report.assurance}`);
+
+drawCell(50, 150 + lineHeights * 8, columnWidths, '2.9 ระดับความมีสระสำคัญ (Materiality Threshold) ');
+drawCell(40 + columnWidths + cellSpacing, 150 + lineHeights * 8, columnWidths, `${report.materially}`);
+            });
+        });
+    });
+});
     //จบบทนำ 
     //หน้าสอง 
     doc.addPage();  
+
     doc.fontSize(22).text('3.ขอบเขต', 20, 100);
-     doc.fontSize(16).text(`Lorem Ipsum คือ เนื้อหาจำลองแบบเรียบๆ ที่ใช้กันในธุรกิจงานพิมพ์หรืองานเรียงพิมพ์ มันได้กลายมาเป็นเนื้อหาจำลองมาตรฐานของธุรกิจดังกล่าวมาตั้งแต่ศตวรรษที่ 16 เมื่อเครื่องพิมพ์โนเนมเครื่องหนึ่งนำรางตัวพิมพ์มาสลับสับตำแหน่งตัวอักษรเพื่อทำหนังสือตัวอย่าง Lorem Ipsum อยู่ยงคงกระพันมาไม่ใช่แค่เพียงห้าศตวรรษ แต่อยู่มาจนถึงยุคที่พลิกโฉมเข้าสู่งานเรียงพิมพ์ด้วยวิธีทางอิเล็กทรอนิกส์ และยังคงสภาพเดิมไว้อย่างไม่มีการเปลี่ยนแปลง มันได้รับความนิยมมากขึ้นในยุค ค.ศ. 1960 เมื่อแผ่น Letraset วางจำหน่ายโดยมีข้อความบนนั้นเป็น Lorem Ipsum และล่าสุดกว่านั้น คือเมื่อซอฟท์แวร์การทำสื่อสิ่งพิมพ์ (Desktop Publishing) อย่าง Aldus PageMaker ได้รวมเอา Lorem Ipsum เวอร์ชั่นต่างๆ เข้าไว้ในซอฟท์แวร์ด้วย มีหลักฐานที่เป็นข้อเท็จจริงยืนยันมานานแล้ว ว่าเนื้อหาที่อ่านรู้เรื่องนั้นจะไปกวนสมาธิของคนอ่านให้เขวไปจากส่วนที้เป็น Layout เรานำ Lorem Ipsum มาใช้เพราะความที่มันมีการกระจายของตัวอักษรธรรมดาๆ แบบพอประมาณ ซึ่งเอามาใช้แทนการเขียนว่า ‘ตรงนี้เป็นเนื้อหา, ตรงนี้เป็นเนื้อหา' ได้ และยังทำให้มองดูเหมือนกับภาษาอังกฤษที่อ่านได้ปกติ ปัจจุบันมีแพ็กเกจของซอฟท์แวร์การทำสื่อสิ่งพิมพ์ และซอฟท์แวร์การสร้างเว็บเพจ (Web Page Editor) หลายตัวที่ใช้ Lorem Ipsum เป็นแบบจำลองเนื้อหาที่เป็นค่าตั้งต้น และเวลาที่เสิร์ชด้วยคำว่า 'lorem ipsum' ผลการเสิร์ชที่ได้ก็จะไม่พบบรรดาเว็บไซต์ที่ยังคงอยู่ในช่วงเริ่มสร้างด้วย โดยหลายปีที่ผ่านมาก็มีการคิดค้นเวอร์ชั่นต่างๆ ของ Lorem Ipsum ขึ้นมาใช้ บ้างก็เป็นความบังเอิญ บ้างก็เป็นความตั้งใจ (เช่น การแอบแทรกมุกตลก) ตรงกันข้ามกับความเชื่อที่นิยมกัน Lorem Ipsum `);
-
-     doc.fontSize(20).text('3.1ขอบเขตขององค์กร');
-     doc.fontSize(16).text(`Lorem Ipsum คือ เนื้อหาจำลองแบบเรียบๆ ที่ใช้กันในธุรกิจงานพิมพ์หรืองานเรียงพิมพ์ มันได้กลายมาเป็นเนื้อหาจำลองมาตรฐานของธุรกิจดังกล่าวมาตั้งแต่ศตวรรษที่ 16 เมื่อเครื่องพิมพ์โนเนมเครื่องหนึ่งนำรางตัวพิมพ์มาสลับสับตำแหน่งตัวอักษรเพื่อทำหนังสือตัวอย่าง Lorem Ipsum อยู่ยงคงกระพันมาไม่ใช่แค่เพียงห้าศตวรรษ แต่อยู่มาจนถึงยุคที่พลิกโฉมเข้าสู่งานเรียงพิมพ์ด้วยวิธีทางอิเล็กทรอนิกส์ และยังคงสภาพเดิมไว้อย่างไม่มีการเปลี่ยนแปลง มันได้รับความนิยมมากขึ้นในยุค ค.ศ. 1960 เมื่อแผ่น Letraset วางจำหน่ายโดยมีข้อความบนนั้นเป็น Lorem Ipsum และล่าสุดกว่านั้น คือเมื่อซอฟท์แวร์การทำสื่อสิ่งพิมพ์ (Desktop Publishing) อย่าง Aldus PageMaker ได้รวมเอา Lorem Ipsum เวอร์ชั่นต่างๆ เข้าไว้ในซอฟท์แวร์ด้วย มีหลักฐานที่เป็นข้อเท็จจริงยืนยันมานานแล้ว ว่าเนื้อหาที่อ่านรู้เรื่องนั้นจะไปกวนสมาธิของคนอ่านให้เขวไปจากส่วนที้เป็น Layout เรานำ Lorem Ipsum มาใช้เพราะความที่มันมีการกระจายของตัวอักษรธรรมดาๆ แบบพอประมาณ ซึ่งเอามาใช้แทนการเขียนว่า ‘ตรงนี้เป็นเนื้อหา, ตรงนี้เป็นเนื้อหา' ได้ และยังทำให้มองดูเหมือนกับภาษาอังกฤษที่อ่านได้ปกติ ปัจจุบันมีแพ็กเกจของซอฟท์แวร์การทำสื่อสิ่งพิมพ์ และซอฟท์แวร์การสร้างเว็บเพจ (Web Page Editor) หลายตัวที่ใช้ Lorem Ipsum เป็นแบบจำลองเนื้อหาที่เป็นค่าตั้งต้น และเวลาที่เสิร์ชด้วยคำว่า 'lorem ipsum' ผลการเสิร์ชที่ได้ก็จะไม่พบบรรดาเว็บไซต์ที่ยังคงอยู่ในช่วงเริ่มสร้างด้วย โดยหลายปีที่ผ่านมาก็มีการคิดค้นเวอร์ชั่นต่างๆ ของ Lorem Ipsum ขึ้นมาใช้ บ้างก็เป็นความบังเอิญ บ้างก็เป็นความตั้งใจ (เช่น การแอบแทรกมุกตลก) ตรงกันข้ามกับความเชื่อที่นิยมกัน Lorem Ipsum `);
-
-     doc.fontSize(20).text('3.1.1 โครงสร้างขององค์กร');
-     doc.rect(40, 180, 530, 300).stroke();
+    doc.fontSize(20).text('3.1 ขอบเขตขององค์กร');
+    
+    // Constants for the table
+    const columnWidths2 = 250; // Width of each column
+    const lineHeights2 = 20; // Height of each row
+    const headerColors2 = '#000000'; // Header color
+    
+    // Function to draw a cell in the table
+    function drawCell2(x, y, width, text) {
+        doc.rect(x, y, width, lineHeights2).stroke(headerColors2);
+        doc.fontSize(16).text(text, x + 5, y + 5);
+    }
+    
+    // Draw the table using drawCell function
+    // First Row
+    drawCell2(50, 150, columnWidths2, '1. แนวทางที่ใช้กำหนดขอบเขตองค์กร');
+    drawCell2(40 + columnWidths2 + 10, 150, columnWidths2, 'Cell 1,2');
+    
+    // Second Row
+    drawCell2(50, 150 + lineHeights2, columnWidths2, '2. หน่วยสาธารณูปโภค ');
+    drawCell2(40 + columnWidths2 + 10, 150 + lineHeights2, columnWidths2, 'Cell 2,2');
+    
+    // Third Row
+    drawCell2(50, 150 + lineHeights2 * 2, columnWidths2, '3. เอกสารยืนยันขอบเขต');
+    drawCell2(40 + columnWidths2 + 10, 150 + lineHeights2 * 2, columnWidths2, 'Cell 3,2');
+    
+     
+    doc.addPage();  
+    doc.fontSize(20).text('3.1.1 โครงสร้างขององค์กร', { align: 'left' });
+     ShowData.forEach((item) => {
+        item.faculties.forEach((fac) => {
+            fac.activityperiods.forEach(period => {
+                period.image_files.forEach((image_file) => {
+                    if(image_file.type_fr === '2'){
+                            doc.image(`uploads/${image_file.file_name}`, {
+                            fit: [530, 300], // Fit the image into the specified dimensions
+                            align: 'center', // Align the image to the center of the rectangle
+                            valign: 'center', // Vertically align the image to the center of the rectangle
+                            x: 40, // X-coordinate of the image
+                            y: 120 // Y-coordinate of the image
+                        });
+                    }
+                });
+            });
+        });
+    });
     
      //หน้าที่3
      doc.addPage();
      doc.fontSize(20).text('3.1.2 แผนผังขององค์กร', 20, 100);
-     doc.rect(40, 140, 530, 300).stroke();
+     ShowData.forEach((item) => {
+        item.faculties.forEach((fac) => {
+            fac.activityperiods.forEach(period => {
+                period.image_files.forEach((image_file) => {
+                    if(image_file.type_fr === '3'){
+                            doc.image(`uploads/${image_file.file_name}`, {
+                            fit: [530, 300], // Fit the image into the specified dimensions
+                            align: 'center', // Align the image to the center of the rectangle
+                            valign: 'center', // Vertically align the image to the center of the rectangle
+                            x: 40, // X-coordinate of the image
+                            y: 120 // Y-coordinate of the image
+                        });
+                    }
+                });
+            });
+        });
+    });
 
     //หน้า4
      doc.addPage();
@@ -657,8 +844,7 @@ app.get('/generate-pdf', (req, res) => {
      doc.addPage();
      doc.fontSize(20).text('4.4 Carbon Intensity', 20, 100);
 
-     doc.addPage();
-     doc.image('uploads/1710989446227-scope1.png')
+   /*   doc.image('uploads/1710989446227-scope1.png') */
     // ปิดเอกสาร PDF 
     doc.end();
 
@@ -946,5 +1132,51 @@ app.get('/test101', async (req, res) => {
     }
 });
 
+
+app.get('/test202',async(req,res)=>{
+    try{
+        const ShowData = await CampusModels.findAll(
+            {
+                attributes:['id','campus_name'],
+                where:{
+                    id:'MH'
+                },
+                include:[
+                    {
+                        model:PlaceCmuModels,
+                        attributes:['id','fac_name'],
+                        where:{
+                            id:'MH2009'
+                        },
+                        include:[
+                            {
+                                model:ActivityGHGModel,
+                                attributes:['years'],
+                                where:{
+                                    years:2023
+                                },
+                                include:[
+                                    {
+                                        model:ImageFileModel,
+                                        attributes:['type_fr','file_name']
+                                    },
+                                    {
+                                        model:ReportModel,
+                                        attributes:['intro','tester','coordinator','responsible','monitor','assurance','materially','explanation','cfo_operation1','cfo_operation2','cfo_operation3','image_name']
+
+                                    }
+                                    
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        )
+        res.status(200).json(ShowData);
+    }catch(e){
+        res.status(500).json('Server Error ' + e.message);
+    }
+});
 
 module.exports = app

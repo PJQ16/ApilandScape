@@ -336,5 +336,64 @@ app.post('/users/login', async (req, res) => {
     }
   });
   
+  app.get('/users',async(req,res)=>{
+    try{
+      const ShowData = await UsersModels.findAll(
+        {
+          attributes:[
+            'fname',
+            'sname',
+            'email'
+          ],
+          include:[
+            {
+              model:RoleModels,
+              attributes:['role_name']
+            },
+            {
+              model:PlaceCmuModels,
+              attributes:['id','fac_name'],
+              include:[
+                {
+                  model:CampusModels,
+                  attributes:['id','campus_name']
+                }
+              ]
 
+            }
+          ]
+        }
+      )
+      res.status(200).json(ShowData);
+    }catch(e){
+        res.status(500).json('Server Error ' + e.message);
+    }
+  })
+  
+  app.get('/role',async(req,res)=>{
+    try{
+      const ShowData = await RoleModels.findAll()
+      res.status(200).json(ShowData);
+    }catch(e){
+        res.status(500).json('Server Error ' + e.message);
+    }
+  })
+
+  app.post('/addrole', async (req, res) => {
+    try {
+        const data = req.body;
+
+        const existingRole = await RoleModels.findAll({ where: { role_name: data.role_name } });
+  
+        if (existingRole.length > 0) {
+            return res.status(400).json('ข้อมูลนี้มีอยู่แล้วในระบบ ');
+        } else {
+            const addData = await RoleModels.create(data);
+            return res.status(200).json(addData);
+        }
+
+    } catch (e) {
+        res.status(500).json('Server Error ' + e.message);
+    }
+});
 module.exports = app
