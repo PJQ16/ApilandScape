@@ -145,72 +145,12 @@ app.post('/users/Addusers', async (req, res) => {
     }
 });
 
-/**
- * @swagger
- * /users/login:
- *   post:
- *     summary: User Login
- *     description: Authenticate user and generate JWT token.
- *     tags:
- *       - Authentication
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *               password:
- *                 type: string
- *     responses:
- *       200:
- *         description: Successfully authenticated user
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 token:
- *                   type: string
- *       401:
- *         description: Invalid credentials
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *       404:
- *         description: User not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *       500:
- *         description: Internal Server Error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- */
 
 app.post('/users/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        const user = await UsersModels.findOne({ where: { email }});
-
+      const user = await UsersModels.findOne({ where: { email: email, role_id: 4 } });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -233,7 +173,32 @@ app.post('/users/login', async (req, res) => {
     }
 });
 
+app.post('/admin/login', async (req, res) => {
+  const { email, password } = req.body;
 
+  try {
+    const user = await UsersModels.findOne({ where: { email: email, role_id: 3 } });
+      if (!user) {
+          return res.status(404).json({ error: 'User not found' });
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (!isPasswordValid) {
+          return res.status(401).json({ error: 'Invalid password' });
+      }
+
+      // Create JWT token
+      const secretKey = process.env.SECRET_KEY; // Replace with your actual secret key
+      const token = jwt.sign({ userId: user.id, email: user.email }, secretKey, { expiresIn: '1h' });
+
+      // Send JWT token to the client for authentication
+      res.status(200).json({ message: 'success', token: token });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Internal server error' });
+  }
+});
   
   //แสดงข้อมูลuser และ บทบาท หน่วยงานที่สังกัด
   /**
