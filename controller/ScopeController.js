@@ -58,7 +58,12 @@ app.get('/landscape', async (req, res) => {
             catescopenums.name,
             headcategories.head_name,
             data_scopes.name,
-            lci`;
+            lci
+        ORDER BY
+            years,
+            catescopenums.id,
+            headcategories.id,
+            data_scopes.id;`;
 
     const data = await conn.query(query, { type: QueryTypes.SELECT });
 
