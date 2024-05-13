@@ -37,9 +37,10 @@ app.get('/place/showAllPlace',async(req,res)=>{
 
 app.get('/place/showCampus/:id',async(req,res)=>{
     try {
+    
         const ShowData = await PlaceCmuModels.findAll({
             where:{
-                campus_id:req.params.id
+                campus_id:req.params.id,
             }
         });
     
@@ -83,6 +84,34 @@ app.get('/place/showFaculty',async(req,res)=>{
         res.status(500).json('Error Server ' + e.message);
     }
 });
+
+const { Logo } = require('../middleware/logo');
+app.put('/place/updateLogo/:id', Logo, async (req, res) => {
+    try {
+        const data = {
+            logo: req.file.filename // ชื่อไฟล์ที่อัพโหลด
+        };
+
+        // ให้ใช้งานฟังก์ชัน update ด้วยการระบุอ็อบเจกต์ของข้อมูลที่ต้องการอัพเดท และเงื่อนไขในการอัพเดท
+         const updateData = await PlaceCmuModels.update(data, {
+            where: {
+                id: req.params.id
+            }
+        }); 
+
+        // ตรวจสอบว่ามีการอัพเดทข้อมูลหรือไม่ ถ้ามีให้ส่งข้อมูลที่อัพเดทแล้วกลับไป
+         if (updateData[0] === 1) {
+            res.status(200).json({ message: 'Updated successfully' });
+        } else {
+            res.status(404).json({ message: 'Data not found or no update needed' });
+        } 
+    } catch (e) {
+        res.status(500).json('Error Server ' + e.message);
+    }
+});
+
+
+
 
 
 

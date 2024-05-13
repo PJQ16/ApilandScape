@@ -71,7 +71,32 @@ app.get('/activity/showPeriod/:fac_id/:years',async(req,res)=>{
             },
             {
                model:PlaceCmuModels,
-               attributes:['fac_name','latitude','longitude','address']
+               attributes:['fac_name','latitude','longitude','address','logo']
+            }
+         ]
+      });
+      res.status(200).json(ShowData);
+   }catch(e){
+      res.status(500).json('Server Error ' + e.message);
+   }
+})
+
+//สำหรับผู้ตรวขสอบ
+app.get('/activity/showPeriodInfo/:id',async(req,res)=>{
+   try{
+      const ShowData = await ActivityGHGModel.findAll({
+         attributes:['id','years','employee_amount','building_area'],
+         where:{
+            id:req.params.id,
+         },
+         include:[
+            {
+               model:CampusModels,
+               attributes:['campus_name']
+            },
+            {
+               model:PlaceCmuModels,
+               attributes:['fac_name','latitude','longitude','address','logo']
             }
          ]
       });

@@ -1,4 +1,5 @@
 const express = require('express');
+const { Op } = require("sequelize");
 const app = express();
 
 const { ScopeNumberCateModels, HeadCategoryModels, GwpModels, categoryScopeModels, dataScopeModels, HeadActivityModels } = require('../models/categoryScope');
@@ -7,7 +8,7 @@ const {ReportModel} =require('../models/reportModel');
 const conn = require('../connect/con');
 const { PlaceCmuModels,CampusModels } = require('../models/placeAtCmuModels');
 const { QueryTypes } = require('sequelize');
-const eliteral = conn.literal('(CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) + (CH4 * gwp_CH4) + (N2O * gwp_N2O) + (SF6 * gwp_SF6) + (NF3 * gwp_NF3) + (HFCs * GWP_HFCs) + (PFCs * GWP_PFCs)');
+const eliteral = conn.literal('(kgCO2e) + (CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) + (CH4 * gwp_CH4) + (N2O * gwp_N2O) + (SF6 * gwp_SF6) + (NF3 * gwp_NF3) + (HFCs * GWP_HFCs) + (PFCs * GWP_PFCs)');
 
 /**
  * @swagger
@@ -723,6 +724,19 @@ app.post('/scope/addCategoryScope',async(req,res)=>{
     }
 });
 
+app.put('/scope/addCategoryScope/:id',async(req,res)=>{
+  try{
+       const updateData = await categoryScopeModels.update(req.body,{
+        where:{
+          id:req.params.id,
+        }
+      });
+      res.status(200).send(updateData); 
+  }catch(e){
+      res.status(500).send('Server Error' + e.message);
+  }
+});
+
 //เพิิ่ม DataScope
 /**
  * @swagger
@@ -918,10 +932,11 @@ app.post('/generateActivity', async (req, res) => {
  *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
  *     tags: [Data Activity]
 */
-app.put('/scope/updateQuantity', async (req, res) => {
+app.put('/scope/updateQuantity/:id', async (req, res) => {
   try {
     const payload = req.body;
     const id = payload.id; // รับค่า id จาก payload
+    
     const quantity = payload.quantity; // รับค่า quantity จาก payload    
     // ดำเนินการอัพเดทข้อมูลโดยใช้ฟังก์ชัน update() ของโมเดล
     const modifyData = await dataScopeModels.update({ quantity }, {
@@ -960,7 +975,8 @@ app.get('/scope/datasocpe/:activityperiod_id', async (req, res) => {
               'quantity',
               [eliteral, 'EF'],
               'kgCO2e',
-              'month'
+              'month',
+              'head_id'
           ],
           where:{
             activityperiod_id:req.params.activityperiod_id
@@ -981,6 +997,87 @@ app.get('/scope/datasocpe/:activityperiod_id', async (req, res) => {
       res.status(500).json('Server Error ' + e.message);
   }
 });
+
+//สำหรับผู้ตรวจสอบ
+app.get('/scope/datasocpeTester/:id', async (req, res) => {
+  try {
+    const showData = await ScopeNumberCateModels.findAll({
+      attributes: ['id', 'name'],
+      include: [{
+        model: HeadCategoryModels,
+        attributes: ['id', 'head_name']
+      }]
+    });
+     
+    const result = await dataScopeModels.findAll({
+      attributes: [
+        'id',
+        'head_id',
+        'name',
+        [conn.fn('sum', conn.col('quantity')), 'quantity'],
+        'lci',
+        'CO2',
+        'Fossil_CH4',
+        'CH4',
+        'N2O',
+        'SF6',
+        'NF3',
+        'HFCs',
+        'PFCs',
+        'GWP_HFCs',
+        'GWP_PFCs',
+        'kgCO2e',
+        'sources'
+      ],
+      where: {
+        activityperiod_id: req.params.id
+      },
+      group: ['head_id', 'name'],
+      order: [['id', 'ASC']],
+      include: [{
+        model: GwpModels,
+        attributes: []
+      }]
+    });
+    
+    // จัดรูปแบบข้อมูลใหม่
+    const data = showData.map(item => ({
+      id: item.id,
+      name: item.name,
+      headcategories: item.headcategories.map(headCategory => ({
+        id: headCategory.id,
+        head_name: headCategory.head_name,
+        data_scopes: result
+          .filter(scope => scope.head_id === headCategory.id)
+          .map(scope => ({
+            id: scope.id,
+            head_id: scope.head_id,
+            name: scope.name,
+            quantity: scope.quantity,
+            lci: scope.lci,
+            CO2: scope.CO2,
+            Fossil_CH4: scope.Fossil_CH4,
+            CH4: scope.CH4,
+            N2O: scope.N2O,
+            SF6: scope.SF6,
+            NF3: scope.NF3,
+            HFCs: scope.HFCs,
+            PFCs: scope.PFCs,
+            GWP_HFCs: scope.GWP_HFCs,
+            GWP_PFCs: scope.GWP_PFCs,
+            EF: scope.kgCO2e,
+            sources: scope.sources
+          }))
+      }))
+    }));
+    
+    
+    res.status(200).json(data);
+  } catch (e) {
+    res.status(500).json('Server Error ' + e.message);
+  }
+});
+
 
 /**
  * @swagger
@@ -1059,7 +1156,7 @@ app.get('/categoryScope/:head_id',async(req,res)=>{
   try{
     const ShowData = await categoryScopeModels.findAll(
       {
-        attributes:['name','lci','CO2','Fossil_CH4','CH4','N2O','SF6','NF3','HFCs','PFCs','GWP_HFCs','GWP_PFCs','kgCO2e','sources'],
+        attributes:['id','name','lci','CO2','Fossil_CH4','CH4','N2O','SF6','NF3','HFCs','PFCs','GWP_HFCs','GWP_PFCs','kgCO2e','sources'],
         where:{
           head_id:req.params.head_id
         }
@@ -1073,5 +1170,203 @@ app.get('/categoryScope/:head_id',async(req,res)=>{
   }
 })
 
+//เช็คอัพเดท fuel 
+app.put('/datascope/pullDataFuel/:id',async(req,res)=>{
+  try{
+     //มาอัพเดทค่า scope3
+     const showData1 = await dataScopeModels.findAll(
+      {
+        attributes: [
+          "id",
+          "name",
+          [conn.fn("sum", conn.col("quantity")), "quantity"],
+          "lci",
+          "month",
+          "activityperiod_id"
+        ],
+        where: {
+          head_id: { [Op.between]: [1, 3] },
+          activityperiod_id: req.params.id
+        },
+        group: ["name", "month"],
+        order: [["id", "ASC"]]
+      }
+    )
+ 
+    const showData2 = await dataScopeModels.findAll({
+        attributes: [
+          "id",
+          "name",
+         "quantity",
+          "lci",
+          "month",
+          "activityperiod_id"
+        ],
+      where: {
+        head_id: 8,
+        [Op.or]: [
+          { name: 'Electricity from PEA' },
+          { name: 'Electricity from Private Company' }
+        ],
+        activityperiod_id: req.params.id
+      },
+      order: [['id', 'ASC']]
+    });
+
+     const combinedData = [...showData1,...showData2]; 
+     
+
+// ทำการสร้างข้อมูลที่จะถูกใช้ในการอัพเดท
+const updateData = combinedData.map(data => ({
+  quantity: data.quantity, // ใช้ค่าที่คำนวณไว้ล่วงหน้าเป็นค่าใหม่สำหรับ quantity
+  // เพิ่มเงื่อนไข WHERE เพื่อให้อัพเดทเฉพาะข้อมูลที่มีชื่อและเดือนตรงกัน
+  where: {
+    head_id:11,
+    name: data.name,
+    month: data.month,
+    activityperiod_id: data.activityperiod_id
+  }
+}));
+// ลูปผ่านข้อมูลที่จะถูกใช้ในการอัพเดทและดำเนินการอัพเดทแยกตามแต่ละรายการ
+for (const data of updateData) {
+  await dataScopeModels.update({ quantity: data.quantity }, { where: data.where });
+}
+
+//สำหรับรายงานแยก1
+  const separateUpdate = await dataScopeModels.findAll({
+    where:{
+      name:{
+        [Op.in]: ['Biodiesel', 'Biogas', 'Biomass'],
+      },
+      activityperiod_id: req.params.id,
+      head_id: {
+        [Op.eq]: 1, // ใช้ Op.eq แทนเพื่อให้ Sequelize รู้ว่าเป็นเงื่อนไขที่เท่ากัน
+      },
+    }
+  })
+
+  const separateSyncData  = separateUpdate.map(data =>({
+    quantity: data.quantity,
+    where: {
+      head_id:30,
+      name: data.name,
+      month: data.month,
+      activityperiod_id: data.activityperiod_id
+    } 
+  }))
+
+  for (const dataSeparate of separateSyncData) {
+    await dataScopeModels.update({ quantity: dataSeparate.quantity }, { where: dataSeparate.where });
+  }
+
+  //สำหรับรายงานแยก 3
+  const separateUpdate3 = await dataScopeModels.findAll({
+    where:{
+      name:{
+        [Op.in]: ['Biodiesel', 'Biogas'],
+      },
+      activityperiod_id: req.params.id,
+      head_id: {
+        [Op.eq]: 3, // ใช้ Op.eq แทนเพื่อให้ Sequelize รู้ว่าเป็นเงื่อนไขที่เท่ากัน
+      },
+    }
+  })
+
+  const separateSyncData3  = separateUpdate3.map(data =>({
+    quantity: data.quantity,
+    where: {
+      head_id:31,
+      name: data.name,
+      month: data.month,
+      activityperiod_id: data.activityperiod_id
+    } 
+  }))
+
+  for (const dataSeparate3 of separateSyncData3) {
+    await dataScopeModels.update({ quantity: dataSeparate3.quantity }, { where: dataSeparate3.where });
+  }
+
+
+  //สำหรับรายงานแยก 7
+  const separateUpdate7 = await dataScopeModels.findAll({
+    where:{
+      name:{
+        [Op.in]: ['Biogenic CO2'],
+      },
+      activityperiod_id: req.params.id,
+      head_id: {
+        [Op.eq]: 7, // ใช้ Op.eq แทนเพื่อให้ Sequelize รู้ว่าเป็นเงื่อนไขที่เท่ากัน
+      },
+    }
+  })
+
+  const separateSyncData7  = separateUpdate7.map(data =>({
+    quantity: data.quantity,
+    where: {
+      head_id:32,
+      name: data.name,
+      month: data.month,
+      activityperiod_id: data.activityperiod_id
+    } 
+  }))
+
+  for (const dataSeparate7 of separateSyncData7) {
+    await dataScopeModels.update({ quantity: dataSeparate7.quantity }, { where: dataSeparate7.where });
+  }
+
+   //สำหรับรายงานแยก 33
+    const separateUpdate33 = await dataScopeModels.findAll({
+      attributes: [
+        'id',
+        [conn.fn('sum', conn.col('quantity')), 'quantity'],
+        'lci',
+        'CO2',
+        'Fossil_CH4',
+        'CH4',
+        'N2O',
+        'SF6',
+        'NF3',
+        'HFCs',
+        'PFCs',
+        'GWP_HFCs',
+        'GWP_PFCs',
+        'kgCO2e',
+        'sources',
+        'GWP_id',
+        'head_id',
+        'fac_id',
+        'campus_id',
+        'activityperiod_id',
+        'month',
+        'createdAt',
+        'updatedAt'
+      ],
+      where: {
+        activityperiod_id: req.params.id,
+        head_id: 28
+      },
+      group: ['month'],
+      order: [['id', 'ASC']]
+  })
+
+  const separateSyncData33  = separateUpdate33.map(data =>({
+    quantity: data.quantity,
+    where: {
+      head_id:33,
+      month: data.month,
+      activityperiod_id: data.activityperiod_id
+    } 
+  }))
+
+  for (const dataSeparate33 of separateSyncData33) {
+    await dataScopeModels.update({ quantity: dataSeparate33.quantity }, { where: dataSeparate33.where });
+  } 
+
+
+    res.status(200).json('update successfully');
+  }catch(e){
+    res.status(500).json('Server Error ' + e.message);
+  }
+})
 
 module.exports = app;

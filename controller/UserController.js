@@ -284,7 +284,7 @@ app.post('/admin/login', async (req, res) => {
           },
           {
             model: PlaceCmuModels,
-            attributes: ['id','fac_name','campus_id','latitude','longitude'],
+            attributes: ['id','fac_name','campus_id','latitude','longitude','logo'],
             include: [
               {
                 model: CampusModels,
@@ -313,7 +313,7 @@ app.post('/admin/login', async (req, res) => {
           include:[
             {
               model:RoleModels,
-              attributes:['role_name']
+              attributes:['id','role_name']
             },
             {
               model:PlaceCmuModels,
@@ -361,4 +361,20 @@ app.post('/admin/login', async (req, res) => {
         res.status(500).json('Server Error ' + e.message);
     }
 });
+
+
+app.put('/update/userRole/:email',async(req,res)=>{
+  try{
+     const updateData = await UsersModels.update(req.body,{
+      where:{
+        email:req.params.email
+      }
+    }) 
+    res.status(200).json(updateData); 
+
+  }catch(e){
+    res.status(500).json('Server Error ' + e.message);
+  }
+});
+
 module.exports = app
