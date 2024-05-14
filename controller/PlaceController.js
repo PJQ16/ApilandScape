@@ -35,6 +35,14 @@ app.get('/place/showAllPlace',async(req,res)=>{
     
 });
 
+/**
+ * @swagger
+ * /place/showCampus/:id:
+ *   get:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Campus and Faculties ]
+*/
 app.get('/place/showCampus/:id',async(req,res)=>{
     try {
     
@@ -53,7 +61,7 @@ app.get('/place/showCampus/:id',async(req,res)=>{
 
 /**
  * @swagger
- * /place/showAllPlace:
+ * /place/showCampus:
  *   get:
  *     summary: Retrieve a list of JSONPlaceholder users
  *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
@@ -86,6 +94,58 @@ app.get('/place/showFaculty',async(req,res)=>{
 });
 
 const { Logo } = require('../middleware/logo');
+/**
+ * @swagger
+ * /place/updateLogo/:id:
+ *   put:
+ *     summary: Update logo of a place by ID
+ *     description: Update the logo of a place by providing its ID and uploading a new logo file.
+ *     tags: [Campus and Faculties ]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the place to update logo
+ *       - in: formData
+ *         name: logo
+ *         required: true
+ *         type: file
+ *         description: Logo file to upload
+ *     responses:
+ *       '200':
+ *         description: Updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Updated successfully
+ *       '404':
+ *         description: Data not found or no update needed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Data not found or no update needed
+ *       '500':
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Error Server
+ */
+
 app.put('/place/updateLogo/:id', Logo, async (req, res) => {
     try {
         const data = {

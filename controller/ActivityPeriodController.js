@@ -7,7 +7,7 @@ const conn = require('../connect/con')
 
 /**
  * @swagger
- * /activity:
+ * /activity/showPeriod:
  *   get:
  *     summary: Retrieve a list of JSONPlaceholder users
  *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
@@ -82,6 +82,14 @@ app.get('/activity/showPeriod/:fac_id/:years',async(req,res)=>{
 })
 
 //สำหรับผู้ตรวขสอบ
+/**
+ * @swagger
+ * /activity/showPeriodInfo/:id:
+ *   get:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Activity Period]
+*/
 app.get('/activity/showPeriodInfo/:id',async(req,res)=>{
    try{
       const ShowData = await ActivityGHGModel.findAll({
@@ -135,6 +143,84 @@ app.get('/activity/showPeriod/:fac_id/:years/:employee_amount/:building_area', a
    }
  });
 
+
+//ค้นหา แต่ละปีมาแสดงเป็นตาราง
+/**
+ * @swagger
+ * /activityperiod/:years:
+ *   get:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Activity Period]
+*/
+app.get('/activityperiod/:years',async(req,res)=>{
+   try{
+         const showData = await CampusModels.findAll(
+            {     
+               attributes:['campus_name'],
+               include:[
+                  {
+                     model:PlaceCmuModels,
+                     attributes:['fac_name'],
+                     include:[
+                        {
+                           model:ActivityGHGModel,
+                              attributes:['id','years','employee_amount','building_area','status_base_year','comment','status_activity'],
+                              where:{
+                                 years:req.params.years
+                              }
+
+                        }
+                     ]
+                  }
+               ]
+               
+            }
+         );
+         res.status(200).json(showData);
+   }catch(e){
+      res.status(500).json('server error ' + e.message);
+   }
+});  
+
+
+//ค้นหาตาม id
+/**
+ * @swagger
+ * /activityperiod/info/:id:
+ *   get:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Activity Period]
+*/
+app.get('/activityperiod/info/:id',async(req,res)=>{
+   try{
+         const showData = await PlaceCmuModels.findAll(
+            {  
+                     include:[
+                        {
+                           model:ActivityGHGModel,
+                              attributes:['id','years','employee_amount','building_area','status_base_year','comment','status_activity'],
+                              where:{
+                                 id:req.params.id
+                              }
+
+                        },
+                        {
+                           model:CampusModels,
+                           attributes:['id','campus_name'],
+                          
+                        }
+                     ]
+                  }
+         );
+         res.status(200).json(showData);
+   }catch(e){
+      res.status(500).json('server error ' + e.message);
+   }
+});  
+
+
 /**
  * @swagger
  * /activity/AddPeriod:
@@ -157,7 +243,7 @@ app.get('/activity/showPeriod/:fac_id/:years/:employee_amount/:building_area', a
  *       500:
  *         description: Internal Server Error
  */
- app.post('/activity/AddPeriod',async(req,res)=>{
+app.post('/activity/AddPeriod',async(req,res)=>{
    try{
        const Faculties = await PlaceCmuModels.findAll();
        const cateScopes = await categoryScopeModels.findAll();
@@ -292,66 +378,6 @@ app.put('/activity/modifyDataPeriod/:id',async(req,res)=>{
        res.status(500).json({ message: 'Server Error', error: e.message });
      }
    });
-
-//ค้นหา แต่ละปีมาแสดงเป็นตาราง
-app.get('/activityperiod/:years',async(req,res)=>{
-   try{
-         const showData = await CampusModels.findAll(
-            {     
-               attributes:['campus_name'],
-               include:[
-                  {
-                     model:PlaceCmuModels,
-                     attributes:['fac_name'],
-                     include:[
-                        {
-                           model:ActivityGHGModel,
-                              attributes:['id','years','employee_amount','building_area','status_base_year','comment','status_activity'],
-                              where:{
-                                 years:req.params.years
-                              }
-
-                        }
-                     ]
-                  }
-               ]
-               
-            }
-         );
-         res.status(200).json(showData);
-   }catch(e){
-      res.status(500).json('server error ' + e.message);
-   }
-});  
-
-
-//ค้นหาตาม id
-app.get('/activityperiod/info/:id',async(req,res)=>{
-   try{
-         const showData = await PlaceCmuModels.findAll(
-            {  
-                     include:[
-                        {
-                           model:ActivityGHGModel,
-                              attributes:['id','years','employee_amount','building_area','status_base_year','comment','status_activity'],
-                              where:{
-                                 id:req.params.id
-                              }
-
-                        },
-                        {
-                           model:CampusModels,
-                           attributes:['id','campus_name'],
-                          
-                        }
-                     ]
-                  }
-         );
-         res.status(200).json(showData);
-   }catch(e){
-      res.status(500).json('server error ' + e.message);
-   }
-});  
 
 
 module.exports = app

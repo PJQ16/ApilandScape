@@ -11,6 +11,252 @@ const Service = require('../controller/Service');
 const {RoleModels,UsersModels} = require('../models/userModel');
 const {PlaceCmuModels, CampusModels} = require('../models/placeAtCmuModels');
 
+  //แสดงข้อมูลuser และ บทบาท หน่วยงานที่สังกัด
+  /**
+ * @swagger
+ * /users/showUserApi:
+ *   get:
+ *     summary: Show User API
+ *     description: Retrieve user details.
+ *     tags:
+ *       - Users
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved user details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 result:
+ *                   $ref: '#/components/schemas/UserDetails'
+ *                 message:
+ *                   type: string
+ *       500:
+ *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     UserDetails:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *         fname:
+ *           type: string
+ *         sname:
+ *           type: string
+ *         email:
+ *           type: string
+ *         role:
+ *           type: object
+ *           properties:
+ *             role_name:
+ *               type: string
+ *         place:
+ *           type: object
+ *           properties:
+ *             id:
+ *               type: integer
+ *             fac_name:
+ *               type: string
+ *             campus:
+ *               type: object
+ *               properties:
+ *                 campus_name:
+ *                   type: string
+ *             latitude:
+ *               type: number
+ *             longitude:
+ *               type: number
+ */
+
+app.get('/users/showUserApi', Service.isLogin, async (req, res) => {
+  try {
+    const payLoad = jwt.decode(Service.getToken(req));
+    
+    const users = await UsersModels.findByPk(payLoad.userId, {
+      attributes: ['id', 'fname', 'sname', 'email'],
+      include: [
+        {
+          model: RoleModels,
+          attributes: ['role_name'],
+        },
+        {
+          model: PlaceCmuModels,
+          attributes: ['id','fac_name','campus_id','latitude','longitude','logo'],
+          include: [
+            {
+              model: CampusModels,
+              attributes: ['campus_name'],
+            },
+          ],
+        },
+      ],
+
+    });
+    res.status(200).json({ result: users, message: 'success' });
+  } catch (e) {
+    res.status(500).json('Server Error ' + e.message);
+  }
+});
+
+/**
+* @swagger
+* /users:
+*   get:
+*     summary: Get Users
+*     description: Retrieve a list of users with their details including first name, last name, email, role, facility name, and campus name.
+*     tags:
+*       - Users
+*     responses:
+*       '200':
+*         description: A list of users with details
+*         content:
+*           application/json:
+*             schema:
+*               type: array
+*               items:
+*                 type: object
+*                 properties:
+*                   fname:
+*                     type: string
+*                     description: First name of the user
+*                   sname:
+*                     type: string
+*                     description: Last name of the user
+*                   email:
+*                     type: string
+*                     description: Email address of the user
+*                   role:
+*                     type: object
+*                     properties:
+*                       id:
+*                         type: number
+*                         description: Role ID
+*                       role_name:
+*                         type: string
+*                         description: Role name
+*                   place:
+*                     type: object
+*                     properties:
+*                       id:
+*                         type: number
+*                         description: Facility ID
+*                       fac_name:
+*                         type: string
+*                         description: Facility name
+*                       campus:
+*                         type: object
+*                         properties:
+*                           id:
+*                             type: number
+*                             description: Campus ID
+*                           campus_name:
+*                             type: string
+*                             description: Campus name
+*       '500':
+*         description: Internal server error
+*         content:
+*           application/json:
+*             schema:
+*               type: object
+*               properties:
+*                 error:
+*                   type: string
+*                   example: Server Error Internal server error
+*/
+
+app.get('/users',async(req,res)=>{
+  try{
+    const ShowData = await UsersModels.findAll(
+      {
+        attributes:[
+          'fname',
+          'sname',
+          'email'
+        ],
+        include:[
+          {
+            model:RoleModels,
+            attributes:['id','role_name']
+          },
+          {
+            model:PlaceCmuModels,
+            attributes:['id','fac_name'],
+            include:[
+              {
+                model:CampusModels,
+                attributes:['id','campus_name']
+              }
+            ]
+
+          }
+        ]
+      }
+    )
+    res.status(200).json(ShowData);
+  }catch(e){
+      res.status(500).json('Server Error ' + e.message);
+  }
+})
+
+/**
+* @swagger
+* /role:
+*   get:
+*     summary: Get Roles
+*     description: Retrieve a list of roles.
+*     tags:
+*       - Users
+*     responses:
+*       '200':
+*         description: A list of roles
+*         content:
+*           application/json:
+*             schema:
+*               type: array
+*               items:
+*                 type: object
+*                 properties:
+*                   id:
+*                     type: number
+*                     description: Role ID
+*                   role_name:
+*                     type: string
+*                     description: Role name
+*       '500':
+*         description: Internal server error
+*         content:
+*           application/json:
+*             schema:
+*               type: object
+*               properties:
+*                 error:
+*                   type: string
+*                   example: Server Error Internal server error
+*/
+
+app.get('/role',async(req,res)=>{
+  try{
+    const ShowData = await RoleModels.findAll()
+    res.status(200).json(ShowData);
+  }catch(e){
+      res.status(500).json('Server Error ' + e.message);
+  }
+})
 //เพิ่มข้อมูล
 /**
  * @swagger
@@ -145,6 +391,70 @@ app.post('/users/Addusers', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /users/login:
+ *   post:
+ *     summary: User Login
+ *     description: Authenticate a user by email and password.
+ *     tags:
+ *      - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       '200':
+ *         description: User authenticated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: success
+ *                 token:
+ *                   type: string
+ *                   description: JWT token for authentication
+ *       '401':
+ *         description: Invalid password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Invalid password
+ *       '404':
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User not found
+ *       '500':
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
+ */
 
 app.post('/users/login', async (req, res) => {
     const { email, password } = req.body;
@@ -173,6 +483,71 @@ app.post('/users/login', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /admin/login:
+ *   post:
+ *     summary: Admin Login
+ *     description: Authenticate an admin by email and password.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       '200':
+ *         description: Admin authenticated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: success
+ *                 token:
+ *                   type: string
+ *                   description: JWT token for authentication
+ *       '401':
+ *         description: Invalid password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Invalid password
+ *       '404':
+ *         description: Admin not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User not found
+ *       '500':
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
+ */
+
 app.post('/admin/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -200,31 +575,52 @@ app.post('/admin/login', async (req, res) => {
   }
 });
   
-  //แสดงข้อมูลuser และ บทบาท หน่วยงานที่สังกัด
+
+
   /**
  * @swagger
- * /users/showUserApi:
- *   get:
- *     summary: Show User API
- *     description: Retrieve user details.
+ * /addrole:
+ *   post:
+ *     summary: Add Role
+ *     description: Add a new role.
  *     tags:
  *       - Users
- *     security:
- *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               role_name:
+ *                 type: string
+ *                 description: Name of the role to be added.
  *     responses:
- *       200:
- *         description: Successfully retrieved user details
+ *       '200':
+ *         description: Role added successfully
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 result:
- *                   $ref: '#/components/schemas/UserDetails'
+ *                 id:
+ *                   type: number
+ *                   description: ID of the newly added role
+ *                 role_name:
+ *                   type: string
+ *                   description: Name of the newly added role
+ *       '400':
+ *         description: Role already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
  *                 message:
  *                   type: string
- *       500:
- *         description: Internal Server Error
+ *                   description: Error message indicating that the role already exists
+ *       '500':
+ *         description: Internal server error
  *         content:
  *           application/json:
  *             schema:
@@ -232,117 +628,8 @@ app.post('/admin/login', async (req, res) => {
  *               properties:
  *                 error:
  *                   type: string
+ *                   example: Server Error Internal server error
  */
-
-/**
- * @swagger
- * components:
- *   schemas:
- *     UserDetails:
- *       type: object
- *       properties:
- *         id:
- *           type: integer
- *         fname:
- *           type: string
- *         sname:
- *           type: string
- *         email:
- *           type: string
- *         role:
- *           type: object
- *           properties:
- *             role_name:
- *               type: string
- *         place:
- *           type: object
- *           properties:
- *             id:
- *               type: integer
- *             fac_name:
- *               type: string
- *             campus:
- *               type: object
- *               properties:
- *                 campus_name:
- *                   type: string
- *             latitude:
- *               type: number
- *             longitude:
- *               type: number
- */
-
-  app.get('/users/showUserApi', Service.isLogin, async (req, res) => {
-    try {
-      const payLoad = jwt.decode(Service.getToken(req));
-      const users = await UsersModels.findByPk(payLoad.userId, {
-        attributes: ['id', 'fname', 'sname', 'email'],
-        include: [
-          {
-            model: RoleModels,
-            attributes: ['role_name'],
-          },
-          {
-            model: PlaceCmuModels,
-            attributes: ['id','fac_name','campus_id','latitude','longitude','logo'],
-            include: [
-              {
-                model: CampusModels,
-                attributes: ['campus_name'],
-              },
-            ],
-          },
-        ],
-
-      });
-      res.status(200).json({ result: users, message: 'success' });
-    } catch (e) {
-      res.status(500).json('Server Error ' + e.message);
-    }
-  });
-  
-  app.get('/users',async(req,res)=>{
-    try{
-      const ShowData = await UsersModels.findAll(
-        {
-          attributes:[
-            'fname',
-            'sname',
-            'email'
-          ],
-          include:[
-            {
-              model:RoleModels,
-              attributes:['id','role_name']
-            },
-            {
-              model:PlaceCmuModels,
-              attributes:['id','fac_name'],
-              include:[
-                {
-                  model:CampusModels,
-                  attributes:['id','campus_name']
-                }
-              ]
-
-            }
-          ]
-        }
-      )
-      res.status(200).json(ShowData);
-    }catch(e){
-        res.status(500).json('Server Error ' + e.message);
-    }
-  })
-  
-  app.get('/role',async(req,res)=>{
-    try{
-      const ShowData = await RoleModels.findAll()
-      res.status(200).json(ShowData);
-    }catch(e){
-        res.status(500).json('Server Error ' + e.message);
-    }
-  })
 
   app.post('/addrole', async (req, res) => {
     try {
@@ -363,6 +650,15 @@ app.post('/admin/login', async (req, res) => {
 });
 
 
+/**
+ * @swagger
+ * /update/userRole/:email:
+ *   put:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Users]
+*/
+//แสดงข้อมููลหน้าinfo
 app.put('/update/userRole/:email',async(req,res)=>{
   try{
      const updateData = await UsersModels.update(req.body,{

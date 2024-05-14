@@ -20,152 +20,148 @@ const eliteral = conn.literal('(kgCO2e) + (CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fo
 */
 app.get('/landscape', async (req, res) => {
   try {
-    const query = `
-        SELECT 
-            campuses.id AS campus_id,
-            campus_name,
-            faculties.id AS fac_id,
-            fac_name,
-            years,
-            catescopenums.name AS scope_name,
-            headcategories.id as head_id,
-            headcategories.head_name,
-            data_scopes.name,
-            lci,
-            SUM((quantity * (
-                            (kgCO2e)  +
-                            (CO2 * gwp_CO2) + 
-                            (Fossil_CH4 * gwp_Fossil_CH4) + 
-                            (CH4 * gwp_CH4) + 
-                            (N2O * gwp_N2O) + 
-                            (SF6 * gwp_SF6) + 
-                            (NF3 * gwp_NF3) + 
-                            (HFCs * GWP_HFCs) + 
-                            (PFCs * GWP_PFCs)
-                          )) / 1000) AS tCO2e
-        FROM 
-            data_scopes 
-            INNER JOIN activityperiods ON data_scopes.activityperiod_id = activityperiods.id 
-            INNER JOIN gwps ON data_scopes.GWP_id = gwps.id  
-            INNER JOIN faculties ON activityperiods.fac_id = faculties.id
-            INNER JOIN campuses ON faculties.campus_id = campuses.id
-            INNER JOIN headcategories ON data_scopes.head_id = headcategories.id
-            INNER JOIN catescopenums ON headcategories.scopenum_id = catescopenums.id
-        GROUP BY
-            campus_id,
-            fac_id,
-            activityperiods.id,
-            years,
-            catescopenums.name,
-            headcategories.head_name,
-            data_scopes.name,
-            lci
-        ORDER BY
-            years,
-            catescopenums.id,
-            headcategories.id,
-            data_scopes.id;`;
+      const query = `
+          SELECT 
+              campuses.id AS campus_id,
+              campus_name,
+              faculties.id AS fac_id,
+              fac_name,
+              years,
+              catescopenums.name AS scope_name,
+              headcategories.id as head_id,
+              headcategories.head_name,
+              data_scopes.name,
+              lci,
+              SUM((quantity * (
+                              (kgCO2e)  +
+                              (CO2 * gwp_CO2) + 
+                              (Fossil_CH4 * gwp_Fossil_CH4) + 
+                              (CH4 * gwp_CH4) + 
+                              (N2O * gwp_N2O) + 
+                              (SF6 * gwp_SF6) + 
+                              (NF3 * gwp_NF3) + 
+                              (HFCs * GWP_HFCs) + 
+                              (PFCs * GWP_PFCs)
+                            )) / 1000) AS tCO2e
+          FROM 
+              data_scopes 
+              INNER JOIN activityperiods ON data_scopes.activityperiod_id = activityperiods.id 
+              INNER JOIN gwps ON data_scopes.GWP_id = gwps.id  
+              INNER JOIN faculties ON activityperiods.fac_id = faculties.id
+              INNER JOIN campuses ON faculties.campus_id = campuses.id
+              INNER JOIN headcategories ON data_scopes.head_id = headcategories.id
+              INNER JOIN catescopenums ON headcategories.scopenum_id = catescopenums.id
+          GROUP BY
+              campus_id,
+              fac_id,
+              activityperiods.id,
+              years,
+              catescopenums.id,
+              catescopenums.name,
+              headcategories.head_name,
+              data_scopes.name,
+              lci`;
 
-    const data = await conn.query(query, { type: QueryTypes.SELECT });
+      const data = await conn.query(query, { type: QueryTypes.SELECT });
 
-    const formattedData = [];
-    let currentCampusId = null;
-    let currentFacId = null;
-    let currentActivityPeriodId = null;
-    let campus = null;
-    let faculty = null;
-    let activityPeriod = null;
+      const formattedData = [];
+      let currentCampusId = null;
+      let currentFacId = null;
+      let currentActivityPeriodId = null;
+      let campus = null;
+      let faculty = null;
+      let activityPeriod = null;
 
-    data.forEach(item => {
-        if (item.campus_id !== currentCampusId) {
-            currentCampusId = item.campus_id;
-            campus = {
-                id: currentCampusId,
-                campus_name: item.campus_name,
-                faculties: []
-            };
-            formattedData.push(campus);
-            currentFacId = null;
-        }
+      data.forEach(item => {
+          if (item.campus_id !== currentCampusId) {
+              currentCampusId = item.campus_id;
+              campus = {
+                  id: currentCampusId,
+                  campus_name: item.campus_name,
+                  faculties: []
+              };
+              formattedData.push(campus);
+              currentFacId = null;
+          }
 
-        if (item.fac_id !== currentFacId) {
-            currentFacId = item.fac_id;
-            faculty = {
-                id: currentFacId,
-                fac_name: item.fac_name,
-                activityperiods: []
-            };
-            campus.faculties.push(faculty);
-            currentActivityPeriodId = null;
-        }
+          if (item.fac_id !== currentFacId) {
+              currentFacId = item.fac_id;
+              faculty = {
+                  id: currentFacId,
+                  fac_name: item.fac_name,
+                  activityperiods: []
+              };
+              campus.faculties.push(faculty);
+              currentActivityPeriodId = null;
+          }
 
-        if (item.years !== currentActivityPeriodId) {
-            currentActivityPeriodId = item.years;
-            activityPeriod = {
-                years: item.years,
-                scopenums: []
-            };
-            faculty.activityperiods.push(activityPeriod);
-        }
+          if (item.years !== currentActivityPeriodId) {
+              currentActivityPeriodId = item.years;
+              activityPeriod = {
+                  years: item.years,
+                  scopenums: []
+              };
+              faculty.activityperiods.push(activityPeriod);
+          }
 
-        const scopeIndex = activityPeriod.scopenums.findIndex(scope => scope.name === item.scope_name);
-        if (scopeIndex === -1) {
-            activityPeriod.scopenums.push({
-                name: item.scope_name,
-                headcategories: [
-                    {
-                        head_id: item.head_id,
-                        head_name: item.head_name,
-                       
-                        data_scopes: [
-                            {
-                                name: item.name,
-                                lci: item.lci,
-                                tCO2e: item.tCO2e
-                            }
-                        ]
-                    }
-                ]
-            });
-        } else {
-            const headIndex = activityPeriod.scopenums[scopeIndex].headcategories.findIndex(head => head.head_name === item.head_name);
-            if (headIndex === -1) {
-                activityPeriod.scopenums[scopeIndex].headcategories.push({
-                    head_id: item.head_id,
-                    head_name: item.head_name,
-                    data_scopes: [
-                        {
-                            name: item.name,
-                            lci: item.lci,
-                            tCO2e: item.tCO2e
-                        }
-                    ]
-                });
-            } else {
-                activityPeriod.scopenums[scopeIndex].headcategories[headIndex].data_scopes.push({
-                    name: item.name,
-                    lci: item.lci,
-                    tCO2e: item.tCO2e
-                });
-            }
-        }
-    });
+          const scopeIndex = activityPeriod.scopenums.findIndex(scope => scope.name === item.scope_name);
+          if (scopeIndex === -1) {
+              activityPeriod.scopenums.push({
+                  name: item.scope_name,
+                  headcategories: [
+                      {
+                          head_id: item.head_id,
+                          head_name: item.head_name,
+                         
+                          data_scopes: [
+                              {
+                                  name: item.name,
+                                  lci: item.lci,
+                                  tCO2e: item.tCO2e
+                              }
+                          ]
+                      }
+                  ]
+              });
+          } else {
+              const headIndex = activityPeriod.scopenums[scopeIndex].headcategories.findIndex(head => head.head_name === item.head_name);
+              if (headIndex === -1) {
+                  activityPeriod.scopenums[scopeIndex].headcategories.push({
+                      head_id: item.head_id,
+                      head_name: item.head_name,
+                      data_scopes: [
+                          {
+                              name: item.name,
+                              lci: item.lci,
+                              tCO2e: item.tCO2e
+                          }
+                      ]
+                  });
+              } else {
+                  activityPeriod.scopenums[scopeIndex].headcategories[headIndex].data_scopes.push({
+                      name: item.name,
+                      lci: item.lci,
+                      tCO2e: item.tCO2e
+                  });
+              }
+          }
+      });
 
-    // เรียงลำดับ headcategories ตาม head_id จากน้อยไปมาก
-    formattedData.forEach(campus => {
-        campus.faculties.forEach(faculty => {
-            faculty.activityperiods.forEach(activityPeriod => {
-                activityPeriod.scopenums.forEach(scope => {
-                    scope.headcategories.sort((a, b) => a.head_id - b.head_id);
-                });
-            });
-        });
-    });
+      // เรียงลำดับ headcategories ตาม head_id จากน้อยไปมาก
+      formattedData.forEach(campus => {
+          campus.faculties.forEach(faculty => {
+              faculty.activityperiods.forEach(activityPeriod => {
+                  activityPeriod.scopenums.forEach(scope => {
+                      scope.headcategories.sort((a, b) => a.head_id - b.head_id);
+                  });
+              });
+          });
+      });
 
-    res.status(200).json(formattedData);
-} catch (error) {
-    res.status(500).json({ error: error.message });
-}
+      res.status(200).json(formattedData);
+  } catch (error) {
+      res.status(500).json({ error: error.message });
+  }
 });
 
 //แสดงข้อมูล หน้าการกรอกข้อมูล 
@@ -294,78 +290,6 @@ app.get('/datascope/summary/:years/:id', async (req, res) => {
   }
 });
 
- /* app.get('/landscape', async (req, res) => {
-    try {
-      const results = await conn.query(`
-      SELECT
-		  headcategories.id as id,
-          head_name,
-		  campuses.id as campusId,
-          campus_name,
-          faculties.id as facultiesID,
-          fac_name,
-          SUM(quantity * (CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) + (CH4 * gwp_CH4) + (N2O * gwp_N2O) + (SF6 * gwp_SF6) + (NF3 * gwp_NF3) + (HFCs * GWP_HFCs) + (PFCs * GWP_PFCs))/1000 AS tco2e,
-          scopenums.name AS name,
-          years
-        FROM
-          data_scopes
-        INNER JOIN
-          gwps ON data_scopes.GWP_id = gwps.id
-        INNER JOIN
-          headcategories ON data_scopes.head_id = headcategories.id
-        INNER JOIN
-          scopenums ON headcategories.scopenum_id = scopenums.id
-        INNER JOIN
-         campuses ON data_scopes.campus_id = campuses.id
-         INNER JOIN
-         faculties ON data_scopes.fac_id = faculties.id
-        WHERE
-          scopenum_id = ?
-        GROUP BY
-          head_id, scopenums.name,faculties.id,years
-
-        UNION
-  
-        SELECT
-          headcategories.id as id,
-          head_name,
-		  campuses.id as campusId,
-          campus_name,
-          faculties.id as facultiesID,
-          fac_name,
-          SUM(quantity * (kgCO2e))/1000 AS tco2e,
-          scopenums.name AS name,
-          years
-        FROM
-          data_scopes
-        INNER JOIN
-          gwps ON data_scopes.GWP_id = gwps.id
-        INNER JOIN
-          headcategories ON data_scopes.head_id = headcategories.id
-        INNER JOIN
-          scopenums ON headcategories.scopenum_id = scopenums.id
-           INNER JOIN
-         campuses ON data_scopes.campus_id = campuses.id
-         INNER JOIN
-         faculties ON data_scopes.fac_id = faculties.id
-        WHERE
-          scopenum_id != ?
-        GROUP BY
-          head_id, scopenums.name,faculties.id,years
-        ORDER BY
-        	years,campusId,name,id ASC;
-      `, {
-        replacements: [1, 1],
-        type: conn.QueryTypes.SELECT,
-      });
-  
-      res.status(200).json(results);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
-  });
- */
   
 /**
  * @swagger
@@ -566,272 +490,10 @@ app.get('/scope/apiCateScope',async(req,res)=>{
 })
 
 
-// api  สำหรับการเพิ่มข้อมูล
-/**
- * @swagger
- * /scope/addHeadCate:
- *   post:
- *     summary: Add Head Category
- *     description: Add a new head category to the database.
- *     tags: 
- *       - Head Category
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               head_name:
- *                 type: string
- *               scopenum_id:
- *                 type: integer
- *     responses:
- *       200:
- *         description: Successfully added Head Category
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/HeadCategoryModel'
- *       500:
- *         description: Internal Server Error
- */
-
-/**
- * @swagger
- * components:
- *   schemas:
- *     HeadCategoryModel:
- *       type: object
- *       properties:
- *         id:
- *           type: integer
- *         head_name:
- *           type: string
- *         scopenum_id:
- *           type: integer
- */
-
-app.post('/scope/addGWP',async(req,res)=>{
-    try{
-        const addData = await GwpModels.create(req.body);
-        res.status(200).send(addData);
-    }catch(e){
-        res.status(500).send('Server Error' + e.message);
-    }
-});
-/**
- * @swagger
- * /scope/addHeadCate:
- *   post:
- *     summary: Add Head Category
- *     description: Add a new head category to the database.
- *     tags: 
- *       - Head Category
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               head_name:
- *                 type: string
- *               scopenum_id:
- *                 type: integer
- *     responses:
- *       200:
- *         description: Successfully added Head Category
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/HeadCategoryModel'
- *       500:
- *         description: Internal Server Error
- */
-
-app.post('/scope/addHeadCate',async(req,res)=>{
-    try{
-        const addData = await HeadCategoryModels.create(req.body);
-        res.status(200).send(addData);
-    }catch(e){
-        res.status(500).send('Server Error' + e.message);
-    }
-});
-
-/**
- * @swagger
- * /scope/addCategoryScope:
- *   post:
- *     summary: Add Category Scope
- *     description: Add a new category scope to the database.
- *     tags: 
- *       - Category Scope
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               lci:
- *                 type: string
- *               CO2:
- *                 type: number
- *               Fossil_CH4:
- *                 type: number
- *               CH4:
- *                 type: number
- *               N2O:
- *                 type: number
- *               SF6:
- *                 type: number
- *               NF3:
- *                 type: number
- *               HFCs:
- *                 type: number
- *               PFCs:
- *                 type: number
- *               GWP_HFCs:
- *                 type: number
- *               GWP_PFCs:
- *                 type: number
- *               kgCO2e:
- *                 type: number
- *               sources:
- *                 type: string
- *               head_id:
- *                 type: integer
- *     responses:
- *       200:
- *         description: Successfully added Category Scope
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/CategoryScopeModel'
- *       500:
- *         description: Internal Server Error
- */
-
-app.post('/scope/addCategoryScope',async(req,res)=>{
-    try{
-        const addData = await categoryScopeModels.create(req.body);
-        res.status(200).send(addData);
-    }catch(e){
-        res.status(500).send('Server Error' + e.message);
-    }
-});
-
-app.put('/scope/addCategoryScope/:id',async(req,res)=>{
-  try{
-       const updateData = await categoryScopeModels.update(req.body,{
-        where:{
-          id:req.params.id,
-        }
-      });
-      res.status(200).send(updateData); 
-  }catch(e){
-      res.status(500).send('Server Error' + e.message);
-  }
-});
-
-//เพิิ่ม DataScope
-/**
- * @swagger
- * /scope/addDataScope:
- *   post:
- *     summary: Add Data Scope
- *     description: Add data scope to the database.
- *     tags: 
- *       - Data Scope
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: array
- *             items:
- *               $ref: '#/components/schemas/DataScopeModel'
- *     responses:
- *       200:
- *         description: Successfully added Data Scope
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/DataScopeModel'
- *       500:
- *         description: Internal Server Error
- */
-
-/**
- * @swagger
- * components:
- *   schemas:
- *     DataScopeModel:
- *       type: object
- *       properties:
- *         name:
- *           type: string
- *         quantity:
- *           type: number
- *         lci:
- *           type: string
- *         CO2:
- *           type: number
- *         Fossil_CH4:
- *           type: number
- *         CH4:
- *           type: number
- *         N2O:
- *           type: number
- *         SF6:
- *           type: number
- *         NF3:
- *           type: number
- *         HFCs:
- *           type: number
- *         PFCs:
- *           type: number
- *         GWP_HFCs:
- *           type: number
- *         GWP_PFCs:
- *           type: number
- *         kgCO2e:
- *           type: number
- *         sources:
- *           type: string
- *         GWP_id:
- *           type: integer
- *         head_id:
- *           type: integer
- *         fac_id:
- *           type: string
- *         campus_id:
- *           type: string
- *         activityperiod_id:
- *           type: integer
- *         month:
- *           type: integer
- */
-
-app.post('/scope/addDataScope',async(req,res)=>{
-    try{
-      const dataScope = req.body;
-      const AddData = await dataScopeModels.bulkCreate(dataScope);
-      res.status(200).json(AddData);
-    }catch(e){
-      res.status(500).json('Error Server' + e.message);
-    }
-})
-
 //เช็คว่ามีข้อมูลมไหม
 /**
  * @swagger
- * /scope/datasocpe/:activityperiod_id:
+ * /checkExistingData/:id:
  *   get:
  *     summary: Retrieve a list of JSONPlaceholder users
  *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
@@ -878,77 +540,6 @@ app.get('/checkExistingData/:id', async (req, res) => {
   }
 });
 
-
-
-app.post('/generateActivity', async (req, res) => {
-  try {
-      const cateScopes = await categoryScopeModels.findAll();
-
-      const { activityperiod_id, fac_id, campus_id } = req.body;
-
-      const bulkData = cateScopes.flatMap(cateScope => {
-          const bulkDataPerMonth = [];
-          for (let month = 1; month <= 12; month++) {
-              bulkDataPerMonth.push({
-                  name: cateScope.name,
-                  lci: cateScope.lci,
-                  CO2: cateScope.CO2,
-                  Fossil_CH4: cateScope.Fossil_CH4,
-                  CH4: cateScope.CH4,
-                  N2O: cateScope.N2O,
-                  SF6: cateScope.SF6,
-                  NF3: cateScope.NF3,
-                  HFCs: cateScope.HFCs,
-                  PFCs: cateScope.PFCs,
-                  GWP_HFCs: cateScope.GWP_HFCs,
-                  GWP_PFCs: cateScope.GWP_PFCs,
-                  kgCO2e: cateScope.kgCO2e,
-                  sources: cateScope.sources,
-                  GWP_id: 1,
-                  head_id: cateScope.head_id,
-                  fac_id: fac_id,
-                  campus_id: campus_id,
-                  activityperiod_id: activityperiod_id,
-                  month: month
-              });
-          }
-          return bulkDataPerMonth;
-      });
-       const generateData = await dataScopeModels.bulkCreate(bulkData); 
- 
-      res.status(200).json(generateData);
-  } catch (err) {
-      res.status(500).json('Server Error' + err.message);
-  }
-});
-
-//update ค่าที่ได้จาก activity ในการกรอกข้อมูล บันทึกแบบauto
-//แสดง api  สำหรับการเพิ่มข้อมูล
-/**
- * @swagger
- * /scope/updateQuantity:
- *   put:
- *     summary: Retrieve a list of JSONPlaceholder users
- *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
- *     tags: [Data Activity]
-*/
-app.put('/scope/updateQuantity/:id', async (req, res) => {
-  try {
-    const payload = req.body;
-    const id = payload.id; // รับค่า id จาก payload
-    
-    const quantity = payload.quantity; // รับค่า quantity จาก payload    
-    // ดำเนินการอัพเดทข้อมูลโดยใช้ฟังก์ชัน update() ของโมเดล
-    const modifyData = await dataScopeModels.update({ quantity }, {
-      where: { id } // ระบุเงื่อนไขในการอัพเดทโดยใช้ id
-    });
-
-    res.status(200).json(modifyData); // ส่งข้อความแจ้งว่าอัปเดตข้อมูลสำเร็จ
-
-  } catch (e) {
-    res.status(500).json('Server Error ' + e.message); // หากเกิดข้อผิดพลาดในการอัปเดตข้อมูล
-  }
-});
 
 //แสดง api  สำหรับการเพิ่มข้อมูล
 /**
@@ -999,6 +590,15 @@ app.get('/scope/datasocpe/:activityperiod_id', async (req, res) => {
 });
 
 //สำหรับผู้ตรวจสอบ
+//แสดง api  สำหรับการเพิ่มข้อมูล
+/**
+ * @swagger
+ * /scope/datasocpeTester/:id:
+ *   get:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Data Activity]
+*/
 app.get('/scope/datasocpeTester/:id', async (req, res) => {
   try {
     const showData = await ScopeNumberCateModels.findAll({
@@ -1100,31 +700,44 @@ app.get('/data_scope/:activityperiod_id',async(req,res)=>{
   }
 })
 
-
-const {Image} = require('../middleware/Image'); // ใช้ middleware ที่เตรียมไว้
 /**
  * @swagger
- * /report/generateRport:
+ * /scope:
  *   get:
- *     summary: Retrieve a list of JSONPlaceholder users
- *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
- *     tags: [Report]
-*/
-app.post('/report/generateRport', Image, async (req, res) => {
-  try{
-    const data = {
-      ...req.body,
-      image_name: req.file.filename // ชื่อไฟล์ที่อัพโหลด
-    };
-    const addData = await ReportModel.create(data);  
-    res.status(200).json(addData); 
-
-  }catch(e){
-      res.status(500).json('Server Error '+ e.message)
-  }
-});
-
-
+ *     summary: Get all Scope Number Categories
+ *     description: Retrieve all Scope Number Categories.
+ *     tags: 
+ *       - Data Activity
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved Scope Number Categories
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: The ID of the Scope Number Category
+ *                   name:
+ *                     type: string
+ *                     description: The name of the Scope Number Category
+ *                   value:
+ *                     type: number
+ *                     description: The value of the Scope Number Category
+ *       '500':
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server Error
+ */
 app.get('/scope',async(req,res)=>{
   try{
     const ShowData = await ScopeNumberCateModels.findAll()
@@ -1135,6 +748,52 @@ app.get('/scope',async(req,res)=>{
     res.status(500).json('Server Error ' + e.message);
   }
 });
+
+/**
+ * @swagger
+ * /headscope/:id:
+ *   get:
+ *     summary: Get Head Categories by Scope Number Category ID
+ *     description: Retrieve Head Categories by providing the Scope Number Category ID.
+ *     tags: 
+ *       - Data Activity
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the Scope Number Category
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved Head Categories
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: The ID of the Head Category
+ *                   name:
+ *                     type: string
+ *                     description: The name of the Head Category
+ *                   description:
+ *                     type: string
+ *                     description: The description of the Head Category
+ *       '500':
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server Error
+ */
 
 app.get('/headscope/:id',async(req,res)=>{
   try{
@@ -1151,6 +810,88 @@ app.get('/headscope/:id',async(req,res)=>{
     res.status(500).json('Server Error ' + e.message);
   }
 })
+
+/**
+ * @swagger
+ * /categoryScope/:head_id:
+ *   get:
+ *     summary: Get Category Scopes by Head Category ID
+ *     description: Retrieve Category Scopes by providing the Head Category ID.
+ *     tags: 
+ *       - Data Activity
+ *     parameters:
+ *       - in: path
+ *         name: head_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the Head Category
+ *     responses:
+ *       '200':
+ *         description: Successfully retrieved Category Scopes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: The ID of the Category Scope
+ *                   name:
+ *                     type: string
+ *                     description: The name of the Category Scope
+ *                   lci:
+ *                     type: string
+ *                     description: The life cycle inventory
+ *                   CO2:
+ *                     type: number
+ *                     description: The CO2 value
+ *                   Fossil_CH4:
+ *                     type: number
+ *                     description: The Fossil CH4 value
+ *                   CH4:
+ *                     type: number
+ *                     description: The CH4 value
+ *                   N2O:
+ *                     type: number
+ *                     description: The N2O value
+ *                   SF6:
+ *                     type: number
+ *                     description: The SF6 value
+ *                   NF3:
+ *                     type: number
+ *                     description: The NF3 value
+ *                   HFCs:
+ *                     type: number
+ *                     description: The HFCs value
+ *                   PFCs:
+ *                     type: number
+ *                     description: The PFCs value
+ *                   GWP_HFCs:
+ *                     type: number
+ *                     description: The GWP HFCs value
+ *                   GWP_PFCs:
+ *                     type: number
+ *                     description: The GWP PFCs value
+ *                   kgCO2e:
+ *                     type: number
+ *                     description: The kgCO2e value
+ *                   sources:
+ *                     type: string
+ *                     description: The sources of data
+ *       '500':
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server Error
+ */
 
 app.get('/categoryScope/:head_id',async(req,res)=>{
   try{
@@ -1170,7 +911,507 @@ app.get('/categoryScope/:head_id',async(req,res)=>{
   }
 })
 
+
+// api  สำหรับการเพิ่มข้อมูล
+/**
+ * @swagger
+ * /scope/addGWP:
+ *   post:
+ *     summary: Add a new GWP (Global Warming Potential)
+ *     description: Add a new Global Warming Potential (GWP) by providing the necessary data.
+ *     tags: [Data Activity]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: The name of the GWP
+ *               value:
+ *                 type: number
+ *                 description: The value of the GWP
+ *     responses:
+ *       '200':
+ *         description: GWP added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   description: The ID of the added GWP
+ *                 name:
+ *                   type: string
+ *                   description: The name of the GWP
+ *                 value:
+ *                   type: number
+ *                   description: The value of the GWP
+ *       '500':
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server Error
+ */
+app.post('/scope/addGWP',async(req,res)=>{
+    try{
+        const addData = await GwpModels.create(req.body);
+        res.status(200).send(addData);
+    }catch(e){
+        res.status(500).send('Server Error' + e.message);
+    }
+});
+
+/**
+ * @swagger
+ * /scope/addHeadCate:
+ *   post:
+ *     summary: Add a new Head Category
+ *     description: Add a new Head Category by providing the necessary data.
+ *     tags: 
+ *       - Data Activity
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: The name of the Head Category
+ *               description:
+ *                 type: string
+ *                 description: The description of the Head Category
+ *     responses:
+ *       '200':
+ *         description: Head Category added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   description: The ID of the added Head Category
+ *                 name:
+ *                   type: string
+ *                   description: The name of the Head Category
+ *                 description:
+ *                   type: string
+ *                   description: The description of the Head Category
+ *       '500':
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server Error
+ */
+
+app.post('/scope/addHeadCate',async(req,res)=>{
+    try{
+        const addData = await HeadCategoryModels.create(req.body);
+        res.status(200).send(addData);
+    }catch(e){
+        res.status(500).send('Server Error' + e.message);
+    }
+});
+
+/**
+ * @swagger
+ * /scope/addCategoryScope:
+ *   post:
+ *     summary: Add Category Scope
+ *     description: Add a new category scope to the database.
+ *     tags: 
+ *      - Data Activity
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               lci:
+ *                 type: string
+ *               CO2:
+ *                 type: number
+ *               Fossil_CH4:
+ *                 type: number
+ *               CH4:
+ *                 type: number
+ *               N2O:
+ *                 type: number
+ *               SF6:
+ *                 type: number
+ *               NF3:
+ *                 type: number
+ *               HFCs:
+ *                 type: number
+ *               PFCs:
+ *                 type: number
+ *               GWP_HFCs:
+ *                 type: number
+ *               GWP_PFCs:
+ *                 type: number
+ *               kgCO2e:
+ *                 type: number
+ *               sources:
+ *                 type: string
+ *               head_id:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Successfully added Category Scope
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CategoryScopeModel'
+ *       500:
+ *         description: Internal Server Error
+ */
+
+app.post('/scope/addCategoryScope',async(req,res)=>{
+    try{
+        const addData = await categoryScopeModels.create(req.body);
+        res.status(200).send(addData);
+    }catch(e){
+        res.status(500).send('Server Error' + e.message);
+    }
+});
+
+
+
+//เพิิ่ม DataScope
+/**
+ * @swagger
+ * /scope/addDataScope:
+ *   post:
+ *     summary: Add Data Scope
+ *     description: Add data scope to the database.
+ *     tags: 
+ *      - Data Activity
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: array
+ *             items:
+ *               $ref: '#/components/schemas/DataScopeModel'
+ *     responses:
+ *       200:
+ *         description: Successfully added Data Scope
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/DataScopeModel'
+ *       500:
+ *         description: Internal Server Error
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     DataScopeModel:
+ *       type: object
+ *       properties:
+ *         name:
+ *           type: string
+ *         quantity:
+ *           type: number
+ *         lci:
+ *           type: string
+ *         CO2:
+ *           type: number
+ *         Fossil_CH4:
+ *           type: number
+ *         CH4:
+ *           type: number
+ *         N2O:
+ *           type: number
+ *         SF6:
+ *           type: number
+ *         NF3:
+ *           type: number
+ *         HFCs:
+ *           type: number
+ *         PFCs:
+ *           type: number
+ *         GWP_HFCs:
+ *           type: number
+ *         GWP_PFCs:
+ *           type: number
+ *         kgCO2e:
+ *           type: number
+ *         sources:
+ *           type: string
+ *         GWP_id:
+ *           type: integer
+ *         head_id:
+ *           type: integer
+ *         fac_id:
+ *           type: string
+ *         campus_id:
+ *           type: string
+ *         activityperiod_id:
+ *           type: integer
+ *         month:
+ *           type: integer
+ */
+
+app.post('/scope/addDataScope',async(req,res)=>{
+    try{
+      const dataScope = req.body;
+      const AddData = await dataScopeModels.bulkCreate(dataScope);
+      res.status(200).json(AddData);
+    }catch(e){
+      res.status(500).json('Error Server' + e.message);
+    }
+})
+
+
+/**
+ * @swagger
+ * /generateActivity:
+ *   post:
+ *     summary: Generate Activity
+ *     description: Generate activity data based on provided parameters.
+ *     tags: 
+ *       - Data Activity
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               activityperiod_id:
+ *                 type: integer
+ *                 description: ID of the activity period
+ *               fac_id:
+ *                 type: integer
+ *                 description: ID of the facility
+ *               campus_id:
+ *                 type: integer
+ *                 description: ID of the campus
+ *     responses:
+ *       '200':
+ *         description: Activity generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: The ID of the generated activity data
+ *                   name:
+ *                     type: string
+ *                     description: The name of the category scope
+ *                   lci:
+ *                     type: string
+ *                     description: The life cycle inventory
+ *                   CO2:
+ *                     type: number
+ *                     description: The CO2 value
+ *                   Fossil_CH4:
+ *                     type: number
+ *                     description: The Fossil CH4 value
+ *                   CH4:
+ *                     type: number
+ *                     description: The CH4 value
+ *                   N2O:
+ *                     type: number
+ *                     description: The N2O value
+ *                   SF6:
+ *                     type: number
+ *                     description: The SF6 value
+ *                   NF3:
+ *                     type: number
+ *                     description: The NF3 value
+ *                   HFCs:
+ *                     type: number
+ *                     description: The HFCs value
+ *                   PFCs:
+ *                     type: number
+ *                     description: The PFCs value
+ *                   GWP_HFCs:
+ *                     type: number
+ *                     description: The GWP HFCs value
+ *                   GWP_PFCs:
+ *                     type: number
+ *                     description: The GWP PFCs value
+ *                   kgCO2e:
+ *                     type: number
+ *                     description: The kgCO2e value
+ *                   sources:
+ *                     type: string
+ *                     description: The sources of data
+ *       '500':
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server Error
+ */
+app.post('/generateActivity', async (req, res) => {
+  try {
+      const cateScopes = await categoryScopeModels.findAll();
+
+      const { activityperiod_id, fac_id, campus_id } = req.body;
+
+      const bulkData = cateScopes.flatMap(cateScope => {
+          const bulkDataPerMonth = [];
+          for (let month = 1; month <= 12; month++) {
+              bulkDataPerMonth.push({
+                  name: cateScope.name,
+                  lci: cateScope.lci,
+                  CO2: cateScope.CO2,
+                  Fossil_CH4: cateScope.Fossil_CH4,
+                  CH4: cateScope.CH4,
+                  N2O: cateScope.N2O,
+                  SF6: cateScope.SF6,
+                  NF3: cateScope.NF3,
+                  HFCs: cateScope.HFCs,
+                  PFCs: cateScope.PFCs,
+                  GWP_HFCs: cateScope.GWP_HFCs,
+                  GWP_PFCs: cateScope.GWP_PFCs,
+                  kgCO2e: cateScope.kgCO2e,
+                  sources: cateScope.sources,
+                  GWP_id: 1,
+                  head_id: cateScope.head_id,
+                  fac_id: fac_id,
+                  campus_id: campus_id,
+                  activityperiod_id: activityperiod_id,
+                  month: month
+              });
+          }
+          return bulkDataPerMonth;
+      });
+       const generateData = await dataScopeModels.bulkCreate(bulkData); 
+ 
+      res.status(200).json(generateData);
+  } catch (err) {
+      res.status(500).json('Server Error' + err.message);
+  }
+});
+
+
+//update ค่าที่ได้จาก activity ในการกรอกข้อมูล บันทึกแบบauto
+//แสดง api  สำหรับการเพิ่มข้อมูล
+/**
+ * @swagger
+ * /scope/updateQuantity/:id:
+ *   put:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Data Activity]
+*/
+app.put('/scope/updateQuantity/:id', async (req, res) => {
+  try {
+    const payload = req.body;
+    const id = payload.id; // รับค่า id จาก payload
+    
+    const quantity = payload.quantity; // รับค่า quantity จาก payload    
+    // ดำเนินการอัพเดทข้อมูลโดยใช้ฟังก์ชัน update() ของโมเดล
+    const modifyData = await dataScopeModels.update({ quantity }, {
+      where: { id } // ระบุเงื่อนไขในการอัพเดทโดยใช้ id
+    });
+
+    res.status(200).json(modifyData); // ส่งข้อความแจ้งว่าอัปเดตข้อมูลสำเร็จ
+
+  } catch (e) {
+    res.status(500).json('Server Error ' + e.message); // หากเกิดข้อผิดพลาดในการอัปเดตข้อมูล
+  }
+});
+
+
+
+
+const {Image} = require('../middleware/Image'); // ใช้ middleware ที่เตรียมไว้
+/**
+ * @swagger
+ * /report/generateRport:
+ *   post:
+ *     summary: Retrieve a list of JSONPlaceholder users
+ *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
+ *     tags: [Report]
+*/
+app.post('/report/generateRport', Image, async (req, res) => {
+  try{
+    const data = {
+      ...req.body,
+      image_name: req.file.filename // ชื่อไฟล์ที่อัพโหลด
+    };
+    const addData = await ReportModel.create(data);  
+    res.status(200).json(addData); 
+
+  }catch(e){
+      res.status(500).json('Server Error '+ e.message)
+  }
+});
+
+
 //เช็คอัพเดท fuel 
+/**
+ * @swagger
+ * /datascope/pullDataFuel/:id:
+ *   put:
+ *     summary: Pull Data Fuel
+ *     description: Update data for fuel categories based on provided parameters.
+ *     tags: 
+ *       - Data Activity
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID of the activity period
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       '200':
+ *         description: Data updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: string
+ *               example: update successfully
+ *       '500':
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server Error
+ */
+
 app.put('/datascope/pullDataFuel/:id',async(req,res)=>{
   try{
      //มาอัพเดทค่า scope3
