@@ -4,6 +4,7 @@ const cors = require('cors');
 app.use(cors());
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const nodemailer = require('nodemailer');
 app.use(express.json());
 require('dotenv').config();
 const Service = require('../controller/Service');
@@ -374,7 +375,7 @@ app.post('/users/Addrole',async(req,res)=>{
  *           type: string
  */
 
-app.post('/users/Addusers', async (req, res) => {
+app.post('/users/Addusers',Service.isLogin, async (req, res) => {
     try {
         const { fname, sname, email, password, role_id, fac_id } = req.body;
         const AddData = await UsersModels.create({
@@ -670,6 +671,63 @@ app.put('/update/userRole/:email',async(req,res)=>{
 
   }catch(e){
     res.status(500).json('Server Error ' + e.message);
+  }
+});
+
+
+app.post('/forgot-password', async (req, res) => { // เส้นทาง API สำหรับการขอรีเซ็ตรหัสผ่าน
+  const { email } = req.body; // ดึง email จาก body ของคำขอ
+  const user = await UsersModels.findOne({ where: { email } }); // ค้นหาผู้ใช้ในฐานข้อมูลตามอีเมล
+  if (!user) { // ถ้าหาผู้ใช้ไม่พบ
+    return res.status(404).send('ไม่พบ Email ผู้ใช้งานในระบบ'); // ส่งสถานะ 404 และข้อความ "User not found"
+  }
+
+  // สร้าง JWT โดยมี userId เป็น payload และกำหนดอายุการใช้งาน 5 นาที
+  const secret = process.env.SECRET_KEY
+  const token = jwt.sign({ userId: user.id }, secret, { expiresIn: '5m' });
+  // สร้างลิงก์รีเซ็ตรหัสผ่าน โดยแนบ token
+  const resetLink = `http://localhost:3001/netzero-cmu-ghglandscape/reset-password?token=${token}`;
+
+  // กำหนดการตั้งค่า nodemailer สำหรับการส่งอีเมล
+  const transporter = nodemailer.createTransport({
+    service: 'gmail', // ใช้ Gmail เป็นเซิร์ฟเวอร์อีเมล
+    auth: {
+      user: 'your-email@gmail.com', // อีเมลที่ใช้ส่ง
+      pass: 'your-email-password' // รหัสผ่านของอีเมลที่ใช้ส่ง
+    }
+  });
+
+  // การตั้งค่าของอีเมลที่จะส่ง
+  const mailOptions = {
+    from: 'your-email@gmail.com', // จากอีเมล
+    to: user.email, // ถึงอีเมลของผู้ใช้
+    subject: 'Password Reset', // หัวข้ออีเมล
+    text: `Click the link to reset your password: ${resetLink}` // เนื้อหาอีเมล
+  };
+
+  // ส่งอีเมล
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) { // ถ้ามีข้อผิดพลาดในการส่งอีเมล
+      return res.status(500).send(error.toString()); // ส่งสถานะ 500 และข้อความข้อผิดพลาด
+    }
+    res.status(200).send('Password reset link sent'); // ส่งสถานะ 200 และข้อความ "Password reset link sent"
+  });
+});
+
+
+app.post('/reset-password', async (req, res) => { // เส้นทาง API สำหรับการรีเซ็ตรหัสผ่าน
+  const { token, newPassword } = req.body; // ดึง token และรหัสผ่านใหม่จาก body ของคำขอ
+
+  try {
+    const decoded = jwt.verify(token, 'your_jwt_secret'); // ตรวจสอบและถอดรหัส JWT
+    const hashedPassword = await bcrypt.hash(newPassword, 10); // เข้ารหัสรหัสผ่านใหม่ด้วย bcrypt
+
+    // อัปเดตรหัสผ่านใหม่ในฐานข้อมูล
+    await UsersModels.update({ password: hashedPassword }, { where: { id: decoded.userId } });
+
+    res.status(200).send('Password has been reset'); // ส่งสถานะ 200 และข้อความ "Password has been reset"
+  } catch (error) {
+    res.status(400).send('Invalid or expired token'); // ส่งสถานะ 400 และข้อความ "Invalid or expired token" ถ้ามีข้อผิดพลาด
   }
 });
 

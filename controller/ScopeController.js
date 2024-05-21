@@ -1096,6 +1096,33 @@ app.post('/scope/addCategoryScope',async(req,res)=>{
 
 
 
+app.put('/scope/updateCategoryScope/:id',async(req,res)=>{
+  try{
+       const addData = await categoryScopeModels.update(req.body,{
+        where:{
+          id:req.params.id
+        }
+      }); 
+       res.status(200).json(addData); 
+  }catch(e){
+      res.status(500).json('Server Error' + e.message);
+  }
+});
+
+app.delete('/catescopeDelete/:id',async(req,res)=>{
+  try{
+        const removeData = await categoryScopeModels.destroy({
+        where:{
+          id:req.params.id
+        }
+      });  
+       res.status(200).json(removeData);
+  }catch(e){
+      res.status(500).json('Server Error' + e.message);
+  }
+});
+
+
 //เพิิ่ม DataScope
 /**
  * @swagger
@@ -1312,7 +1339,7 @@ app.post('/generateActivity', async (req, res) => {
           }
           return bulkDataPerMonth;
       });
-       const generateData = await dataScopeModels.bulkCreate(bulkData); 
+       const generateData = await dataScopeModels.bulkCreate(bulkData);
  
       res.status(200).json(generateData);
   } catch (err) {
@@ -1531,9 +1558,6 @@ for (const data of updateData) {
   //สำหรับรายงานแยก 7
   const separateUpdate7 = await dataScopeModels.findAll({
     where:{
-      name:{
-        [Op.in]: ['Biogenic CO2'],
-      },
       activityperiod_id: req.params.id,
       head_id: {
         [Op.eq]: 7, // ใช้ Op.eq แทนเพื่อให้ Sequelize รู้ว่าเป็นเงื่อนไขที่เท่ากัน
@@ -1609,5 +1633,72 @@ for (const data of updateData) {
     res.status(500).json('Server Error ' + e.message);
   }
 })
+
+app.get('/dividData/:id', async (req, res) => {
+  try {
+    const result = await dataScopeModels.count({
+      where: {
+        activityperiod_id: req.params.id,
+        name: 'CH4 จากน้ำขังในพื้นที่นา',
+        quantity: {
+          [Op.ne]: 0.000,
+        },
+      },
+    });
+
+    res.status(200).json(result);
+  }catch(e){
+    res.status(500).json('Server Error ' + e.message);
+  }
+})
+
+app.get('/dataDashboard', async (req, res) => {
+  try {
+    const query = `SELECT   years,catescopenums.name as scopename,
+    SUM((quantity * (
+                                  (kgCO2e)  +
+                                  (CO2 * gwp_CO2) + 
+                                  (Fossil_CH4 * gwp_Fossil_CH4) + 
+                                  (CH4 * gwp_CH4) + 
+                                  (N2O * gwp_N2O) + 
+                                  (SF6 * gwp_SF6) + 
+                                  (NF3 * gwp_NF3) + 
+                                  (HFCs * GWP_HFCs) + 
+                                  (PFCs * GWP_PFCs)
+                                )) / 1000) AS tCO2e
+                              
+                                FROM catescopenums 
+    INNER JOIN headcategories on catescopenums.id =  headcategories.scopenum_id 
+    INNER JOIN data_scopes on headcategories.id = data_scopes.head_id 
+    INNER JOIN gwps on data_scopes.GWP_id = gwps.id
+    INNER JOIN activityperiods on data_scopes.activityperiod_id = activityperiods.id
+    GROUP by years,scopename
+    ORDER BY data_scopes.id ASC;`;
+
+    const data = await conn.query(query, { type: QueryTypes.SELECT });
+
+    // Restructure data into desired format
+    const result = data.reduce((acc, item) => {
+      let year = acc.find(y => y.year === item.years);
+      if (!year) {
+        year = { year: item.years, scope: [] };
+        acc.push(year);
+      }
+
+      year.scope.push({
+        scopename: item.scopename,
+        tCO2e: item.tCO2e
+      });
+
+      return acc;
+    }, []);
+
+    // Send only the 'years' array as response
+    res.json(result.map(item => ({ year: item.year, scope: item.scope })));
+
+  } catch (e) {
+    res.status(500).json('Server Error ' + e.message);
+  }
+});
 
 module.exports = app;

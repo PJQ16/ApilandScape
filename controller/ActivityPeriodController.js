@@ -93,7 +93,7 @@ app.get('/activity/showPeriod/:fac_id/:years',async(req,res)=>{
 app.get('/activity/showPeriodInfo/:id',async(req,res)=>{
    try{
       const ShowData = await ActivityGHGModel.findAll({
-         attributes:['id','years','employee_amount','building_area'],
+         attributes:['id','years','employee_amount','building_area','comment','status_activity'],
          where:{
             id:req.params.id,
          },
@@ -379,5 +379,26 @@ app.put('/activity/modifyDataPeriod/:id',async(req,res)=>{
      }
    });
 
+   app.put('/activity/check/:id',async(req,res)=>{
+      try{
+   
+         const id = req.params.id;
+         const { comment,status_activity  } = req.body;
+      
+         const [updatedRowsCount, updatedRows] = await ActivityGHGModel.update(
+            { comment,status_activity },
+            { where: { id } }
+          );
+   
+          if (updatedRowsCount > 0) {
+            res.status(200).json({ message: 'Update successful', updatedRowsCount, updatedRows });
+          } else {
+            res.status(404).json({ message: 'No data found to update' });
+          }
+        } catch (e) {
+          console.error('Error:', e.message);
+          res.status(500).json({ message: 'Server Error', error: e.message });
+        }
+      });
 
 module.exports = app
