@@ -230,19 +230,59 @@ app.get('/showHeadActivity',async(req,res)=>{
 app.get('/datascope/summary/:years/:id', async (req, res) => {
   try {
       const rawquery = await conn.query(`
+      SELECT years, SUM(tco2e) AS tco2e, name
+      FROM (
           SELECT 
-              years,
-              SUM(quantity * (
-                  (CO2 * gwp_CO2) + 
-                  (Fossil_CH4 * gwp_Fossil_CH4) + 
-                  (CH4 * gwp_CH4) + 
-                  (N2O * gwp_N2O) + 
-                  (SF6 * gwp_SF6) + 
-                  (NF3 * gwp_NF3) + 
-                  (HFCs * GWP_HFCs) + 
+              activityperiods.years AS years,
+              SUM((quantity / 
+                  (SELECT COUNT(id) FROM data_scopes WHERE activityperiod_id = :id AND name = :data_name AND quantity != :quantity)
+              ) * (
+                  (CO2 * gwp_CO2) +
+                  (Fossil_CH4 * gwp_Fossil_CH4) +
+                  (CH4 * gwp_CH4) +
+                  (N2O * gwp_N2O) +
+                  (SF6 * gwp_SF6) +
+                  (NF3 * gwp_NF3) +
+                  (HFCs * GWP_HFCs) +
                   (PFCs * GWP_PFCs)
-              ) / 1000) AS tco2e, 
-              catescopenums.name AS name  
+              ) / 1000) AS tco2e,
+               catescopenums.name AS name,
+               catescopenums.id AS id
+          FROM 
+              catescopenums 
+          INNER JOIN 
+              headcategories ON catescopenums.id = headcategories.scopenum_id 
+          INNER JOIN  
+              data_scopes ON headcategories.id = data_scopes.head_id 
+          INNER JOIN 
+              gwps ON data_scopes.GWP_id = gwps.id 
+          INNER JOIN 
+              activityperiods ON data_scopes.activityperiod_id = activityperiods.id 
+          
+          WHERE 
+              data_scopes.activityperiod_id = :id
+              AND data_scopes.name = :data_name
+              AND data_scopes.quantity != :quantity
+          GROUP BY 
+              activityperiods.years, catescopenums.name, catescopenums.id
+      
+          UNION ALL
+      
+          -- Subquery 2: กิจกรรมอื่นๆ
+          SELECT 
+              activityperiods.years AS years,
+              SUM(quantity * (
+                  (CO2 * gwp_CO2) +
+                  (Fossil_CH4 * gwp_Fossil_CH4) +
+                  (CH4 * gwp_CH4) +
+                  (N2O * gwp_N2O) +
+                  (SF6 * gwp_SF6) +
+                  (NF3 * gwp_NF3) +
+                  (HFCs * GWP_HFCs) +
+                  (PFCs * GWP_PFCs)
+              ) / 1000) AS tco2e,
+              catescopenums.name AS name,
+              catescopenums.id AS id
           FROM 
               catescopenums 
           INNER JOIN 
@@ -254,18 +294,21 @@ app.get('/datascope/summary/:years/:id', async (req, res) => {
           INNER JOIN 
               activityperiods ON data_scopes.activityperiod_id = activityperiods.id 
           WHERE 
-              catescopenums.id = :catescopenum_id 
-              AND years = :years  
-              AND activityperiod_id = :id
+              data_scopes.name != :data_name 
+              AND catescopenums.id = :catescopenum_id 
+              AND activityperiods.years = :years  
+              AND data_scopes.activityperiod_id = :id
           GROUP BY 
-              catescopenums.name, activityperiods.years
-
-          UNION
-
+              activityperiods.years, catescopenums.name, catescopenums.id
+      
+          UNION ALL
+      
+          -- Subquery 3: กิจกรรมอื่นๆ ที่ไม่ใช่ CH4 จากน้ำขังในพื้นที่นา
           SELECT 
-              years,
+              activityperiods.years AS years,
               SUM(quantity * (kgCO2e) / 1000) AS tco2e, 
-              catescopenums.name AS name  
+              catescopenums.name AS name,
+              catescopenums.id AS id
           FROM 
               catescopenums 
           INNER JOIN 
@@ -278,11 +321,16 @@ app.get('/datascope/summary/:years/:id', async (req, res) => {
               activityperiods ON data_scopes.activityperiod_id = activityperiods.id 
           WHERE 
               catescopenums.id != :catescopenum_id 
-              AND years = :years 
-              AND activityperiod_id = :id 
+              AND activityperiods.years = :years 
+              AND data_scopes.activityperiod_id = :id
           GROUP BY 
-              catescopenums.name, activityperiods.years;
-      `, { replacements: { catescopenum_id: 1, years: req.params.years, id: req.params.id }, type: conn.QueryTypes.SELECT });
+              activityperiods.years, catescopenums.name, catescopenums.id
+      ) AS combined_results
+      GROUP BY 
+          years, name
+      ORDER BY 
+          id ASC;
+      `, { replacements: { catescopenum_id: 1,quantity:0,data_name:'CH4 จากน้ำขังในพื้นที่นา', years: req.params.years, id: req.params.id }, type: conn.QueryTypes.SELECT });
 
       res.status(200).json(rawquery);
   } catch (e) {
