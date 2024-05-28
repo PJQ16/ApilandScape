@@ -201,10 +201,6 @@ const {ActivityGHGModel} = require('../models/activityYear')
                       activityperiod_id:{
                         type: DataTypes.INTEGER(11),
                         allowNull: false
-                      },
-                      month:{
-                        type:DataTypes.INTEGER(2),
-                        allowNull: false
                       }
                     });
  

@@ -279,69 +279,6 @@ app.post('/activity/AddPeriod',async(req,res)=>{
 
          const AddDataActivity = await ActivityGHGModel.bulkCreate(DataActivityperiodArrays);
 
-       /*    const DataScopenum = [];
-        AddDataActivity.forEach((activity) => {
-            catescopenums.forEach((catescopenum) => {
-                DataScopenum.push({
-                    activityperiod_id: activity.id,
-                    name: catescopenum.name,
-                    numscope_id :catescopenum.id
-                });
-            });
-        });
-        
-      const AddScopenumber = await ScopeNumberModels.bulkCreate(DataScopenum);  */
-      
-
-    /*  const DataHeadActivity= [];
-      AddScopenumber.forEach((scopenum)=>{
-         HeadCategory.forEach((HeadActivity)=>{
-            DataHeadActivity.push({
-               head_name:HeadActivity.head_name,
-               scopenum_id:HeadActivity.scopenum_id,  
-               scopenumactivity_id:scopenum.id
-            })
-         })
-      }) 
-
-      const AddHeadActivity = await HeadActivityModels.bulkCreate(DataHeadActivity);   
-      */
-    
-  /*  const bulkDatas = [];
-AddDataActivity.forEach((activity,index) => {
-    const bulkData = cateScopes.flatMap(cateScope => ({
-        name: cateScope.name,
-        lci: cateScope.lci,
-        CO2: cateScope.CO2,
-        Fossil_CH4: cateScope.Fossil_CH4,
-        CH4: cateScope.CH4,
-        N2O: cateScope.N2O,
-        SF6: cateScope.SF6,
-        NF3: cateScope.NF3,
-        HFCs: cateScope.HFCs,
-        PFCs: cateScope.PFCs,
-        GWP_HFCs: cateScope.GWP_HFCs,
-        GWP_PFCs: cateScope.GWP_PFCs,
-        kgCO2e: cateScope.kgCO2e,
-        sources: cateScope.sources,
-        GWP_id: 1,
-        scopenum_id: AddScopenumber[index].id,
-        head_id: cateScope.head_id,
-        fac_id: activity.fac_id,
-        campus_id: activity.campus_id,
-        activityperiod_id: activity.id,
-        month: 1
-    }));
-    bulkDatas.push(bulkData);
-}); */
-
-
-/* // นำ bulkDatas มาเชื่อมต่อเป็นข้อมูลเดียวกัน (flatten) เพื่อส่งค่ากลับ
-const finalBulkData = bulkDatas.flat();
-//ทำงานได้แล้วเหลือ จัดการกับ ขนาดที่จะรับในฐานข้อมูล
-   const createData_scope =  await dataScopeModels.bulkCreate(finalBulkData);
- res.status(200).json(createData_scope);  */
-
  res.status(200).json(AddDataActivity);
    }catch(e){
       res.status(500).json('Server Error ' + e.message);

@@ -11,4 +11,5 @@ const multer = require('multer');
 }); 
 
 // กำหนด multer middleware และให้มันรับเฉพาะไฟล์เดียวที่ชื่อ image
-exports.File = multer({ storage: storage }).single('file_name'); //เป็น key ที่ได้จาก react 
+exports.File = multer({ storage: storage, limits: {fileSize: 2 * 2048 * 2048, // 2MB เป็น byte
+} }).single('file_name'); //เป็น key ที่ได้จาก react 

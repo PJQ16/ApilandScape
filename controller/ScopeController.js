@@ -566,7 +566,6 @@ app.get('/scope/datasocpe/:activityperiod_id', async (req, res) => {
               'quantity',
               [eliteral, 'EF'],
               'kgCO2e',
-              'month',
               'head_id'
           ],
           where:{
@@ -810,6 +809,31 @@ app.get('/headscope/:id',async(req,res)=>{
     res.status(500).json('Server Error ' + e.message);
   }
 })
+
+
+
+app.get('/headscope', async (req, res) => {
+  try {
+    const ShowData = await HeadCategoryModels.findAll({
+      attributes:['id','head_name','scopenum_id'],
+      order: [
+        ['scopenum_id', 'ASC'],
+        ['id', 'ASC']
+      ],
+      include:[
+        {
+          model:ScopeNumberCateModels,
+          attributes:['name']
+        }
+      ]
+    });
+
+    res.status(200).json(ShowData);
+
+  } catch (e) {
+    res.status(500).json('Server Error ' + e.message);
+  }
+});
 
 /**
  * @swagger
@@ -1200,8 +1224,6 @@ app.delete('/catescopeDelete/:id',async(req,res)=>{
  *           type: string
  *         activityperiod_id:
  *           type: integer
- *         month:
- *           type: integer
  */
 
 app.post('/scope/addDataScope',async(req,res)=>{
@@ -1305,15 +1327,19 @@ app.post('/scope/addDataScope',async(req,res)=>{
  *                   type: string
  *                   example: Server Error
  */
-app.post('/generateActivity', async (req, res) => {
+app.post('/generateActivity/:activityperiod_id/:fac_id/:campus_id', async (req, res) => {
   try {
-      const cateScopes = await categoryScopeModels.findAll();
+        const {id} = req.body;
+        const { activityperiod_id, fac_id, campus_id } = req.params;
 
-      const { activityperiod_id, fac_id, campus_id } = req.body;
-
-      const bulkData = cateScopes.flatMap(cateScope => {
+        const cateScopes = await categoryScopeModels.findAll({
+          where:{
+            head_id:id
+          }
+        });
+    
+         const bulkData = cateScopes.flatMap(cateScope => {
           const bulkDataPerMonth = [];
-          for (let month = 1; month <= 12; month++) {
               bulkDataPerMonth.push({
                   name: cateScope.name,
                   lci: cateScope.lci,
@@ -1334,14 +1360,12 @@ app.post('/generateActivity', async (req, res) => {
                   fac_id: fac_id,
                   campus_id: campus_id,
                   activityperiod_id: activityperiod_id,
-                  month: month
               });
-          }
           return bulkDataPerMonth;
       });
-       const generateData = await dataScopeModels.bulkCreate(bulkData);
- 
-      res.status(200).json(generateData);
+       const generateData = await dataScopeModels.bulkCreate(bulkData);  
+  
+        res.status(200).json(generateData);   
   } catch (err) {
       res.status(500).json('Server Error' + err.message);
   }
@@ -1358,23 +1382,20 @@ app.post('/generateActivity', async (req, res) => {
  *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
  *     tags: [Data Activity]
 */
-app.put('/scope/updateQuantity/:id', async (req, res) => {
+app.put('/scope/updateQuantity', async (req, res) => {
   try {
-    const payload = req.body;
-    const id = payload.id; // รับค่า id จาก payload
-    
-    const quantity = payload.quantity; // รับค่า quantity จาก payload    
+    const { id, quantity } = req.body;
     // ดำเนินการอัพเดทข้อมูลโดยใช้ฟังก์ชัน update() ของโมเดล
     const modifyData = await dataScopeModels.update({ quantity }, {
       where: { id } // ระบุเงื่อนไขในการอัพเดทโดยใช้ id
     });
 
     res.status(200).json(modifyData); // ส่งข้อความแจ้งว่าอัปเดตข้อมูลสำเร็จ
-
   } catch (e) {
     res.status(500).json('Server Error ' + e.message); // หากเกิดข้อผิดพลาดในการอัปเดตข้อมูล
   }
 });
+
 
 
 
@@ -1449,14 +1470,13 @@ app.put('/datascope/pullDataFuel/:id',async(req,res)=>{
           "name",
           [conn.fn("sum", conn.col("quantity")), "quantity"],
           "lci",
-          "month",
           "activityperiod_id"
         ],
         where: {
           head_id: { [Op.between]: [1, 3] },
           activityperiod_id: req.params.id
         },
-        group: ["name", "month"],
+        group: ["name"],
         order: [["id", "ASC"]]
       }
     )
@@ -1467,7 +1487,6 @@ app.put('/datascope/pullDataFuel/:id',async(req,res)=>{
           "name",
          "quantity",
           "lci",
-          "month",
           "activityperiod_id"
         ],
       where: {
@@ -1491,7 +1510,6 @@ const updateData = combinedData.map(data => ({
   where: {
     head_id:11,
     name: data.name,
-    month: data.month,
     activityperiod_id: data.activityperiod_id
   }
 }));
@@ -1518,7 +1536,6 @@ for (const data of updateData) {
     where: {
       head_id:30,
       name: data.name,
-      month: data.month,
       activityperiod_id: data.activityperiod_id
     } 
   }))
@@ -1545,7 +1562,6 @@ for (const data of updateData) {
     where: {
       head_id:31,
       name: data.name,
-      month: data.month,
       activityperiod_id: data.activityperiod_id
     } 
   }))
@@ -1570,7 +1586,6 @@ for (const data of updateData) {
     where: {
       head_id:32,
       name: data.name,
-      month: data.month,
       activityperiod_id: data.activityperiod_id
     } 
   }))
@@ -1583,7 +1598,7 @@ for (const data of updateData) {
     const separateUpdate33 = await dataScopeModels.findAll({
       attributes: [
         'id',
-        [conn.fn('sum', conn.col('quantity')), 'quantity'],
+        [conn.fn("sum", conn.col("quantity")), "quantity"],
         'lci',
         'CO2',
         'Fossil_CH4',
@@ -1602,7 +1617,6 @@ for (const data of updateData) {
         'fac_id',
         'campus_id',
         'activityperiod_id',
-        'month',
         'createdAt',
         'updatedAt'
       ],
@@ -1610,7 +1624,7 @@ for (const data of updateData) {
         activityperiod_id: req.params.id,
         head_id: 28
       },
-      group: ['month'],
+      group: ["name"],
       order: [['id', 'ASC']]
   })
 
@@ -1618,7 +1632,6 @@ for (const data of updateData) {
     quantity: data.quantity,
     where: {
       head_id:33,
-      month: data.month,
       activityperiod_id: data.activityperiod_id
     } 
   }))
@@ -1700,5 +1713,6 @@ app.get('/dataDashboard', async (req, res) => {
     res.status(500).json('Server Error ' + e.message);
   }
 });
+
 
 module.exports = app;

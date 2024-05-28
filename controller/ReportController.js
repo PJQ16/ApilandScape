@@ -268,7 +268,6 @@ app.get('/download-excel/:id', async (req, res) => {
                 'GWP_PFCs',
                 'kgCO2e',
                 'sources',
-                'month'
             ],
             where: {
                 activityperiod_id: req.params.id
@@ -297,18 +296,21 @@ app.get('/download-excel/:id', async (req, res) => {
                 });
             });
 
-            let scope = ''; // ประกาศตัวแปร scope ที่นอกเครื่องหมายปีกกาของ if เพื่อให้สามารถเข้าถึงได้ทุกที่ในฟังก์ชัน
+            let scope; // ประกาศตัวแปร scope ที่นอกเครื่องหมายปีกกาของ if เพื่อให้สามารถเข้าถึงได้ทุกที่ในฟังก์ชัน
 
-            if (datascope.head_id <= 7 || datascope.head_id >= 24) {
-                scope = '1';
+            if (datascope.head_id <= 7 || (datascope.head_id >= 24 && datascope.head_id <= 28)) {
+                scope = 'scope1';
             } else if (datascope.head_id === 8) {
-                scope = '2';
+                scope = 'scope2';
             } else if (datascope.head_id >= 9 && datascope.head_id <= 23) {
-                scope = '3';
+                scope = 'scope3';
+            } else if(datascope.head_id >= 30  && datascope.head_id <= 33){
+                scope = 'รายงานแยก';
             }
+
             
             const cellA = worksheet1.getCell(`A${rowNumber}`);
-            cellA.value = 'scope';
+            cellA.value = scope;
 
             const cellB = worksheet1.getCell(`B${rowNumber}`);
             cellB.value = datascope.name; // ใช้ชื่อจาก ExcelReportInfo แทนที่จะใช้ datascope.name

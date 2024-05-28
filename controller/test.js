@@ -244,7 +244,6 @@ app.get('/download-excel', async (req, res) => {
                 'GWP_PFCs',
                 'kgCO2e',
                 'sources',
-                'month'
             ],
             where: {
                 activityperiod_id: 166
