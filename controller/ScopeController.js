@@ -10,6 +10,85 @@ const { PlaceCmuModels,CampusModels } = require('../models/placeAtCmuModels');
 const { QueryTypes } = require('sequelize');
 const eliteral = conn.literal('(kgCO2e) + (CO2 * gwp_CO2) + (Fossil_CH4 * gwp_Fossil_CH4) + (CH4 * gwp_CH4) + (N2O * gwp_N2O) + (SF6 * gwp_SF6) + (NF3 * gwp_NF3) + (HFCs * GWP_HFCs) + (PFCs * GWP_PFCs)');
 
+app.get('/netzero', async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        sn.name, 
+        SUM(quantity * (
+          (kgCO2e) + 
+          (d.CO2 * g.gwp_CO2) + 
+          (d.Fossil_CH4 * g.gwp_Fossil_CH4) + 
+          (d.CH4 * g.gwp_CH4) + 
+          (d.N2O * g.gwp_N2O) + 
+          (d.SF6 * g.gwp_SF6) + 
+          (d.NF3 * g.gwp_NF3) + 
+          (d.HFCs * d.GWP_HFCs) + 
+          (d.PFCs * d.GWP_PFCs)
+        ) / 1000) AS tCO2e 
+      FROM data_scopes AS d 
+      INNER JOIN gwps AS g ON d.GWP_id = g.id
+      INNER JOIN headcategories AS h ON d.head_id = h.id
+      RIGHT JOIN catescopenums AS sn ON h.scopenum_id = sn.id
+      GROUP BY sn.name
+      ORDER BY sn.id
+    `;
+    
+    const datas = await conn.query(query, { type: QueryTypes.SELECT });
+
+    const api = datas.map(data => ({
+      name: data.name,
+      tCO2e: data.tCO2e
+    }));
+
+    res.status(200).json({'result' : api});
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+app.get('/netzeroListyear', async (req, res) => {
+  try {
+    const query = `
+    SELECT sn.name, sum(quantity * ((kgCO2e) + (d.CO2 * g.gwp_CO2) + (d.Fossil_CH4 * g.gwp_Fossil_CH4) + (d.CH4 * g.gwp_CH4) + (d.N2O * g.gwp_N2O) + (d.SF6 * g.gwp_SF6) + (d.NF3 * g.gwp_NF3) + (d.HFCs * d.GWP_HFCs) + (d.PFCs * d.GWP_PFCs))/1000) as tCO2e, a.years FROM data_scopes as d 
+    INNER JOIN gwps as g on d.GWP_id = g.id
+    INNER JOIN headcategories as h on d.head_id = h.id
+    RIGHT JOIN catescopenums as sn on h.scopenum_id = sn.id
+    LEFT JOIN activityperiods as a on d.activityperiod_id = a.id
+    GROUP BY sn.id, a.years;
+    `;
+
+    const datas = await conn.query(query, { type: QueryTypes.SELECT });
+
+    // Group data by years
+    const result = datas.reduce((acc, curr) => {
+      // Find the existing year group
+      let yearGroup = acc.find(group => group.years === curr.years);
+      
+      // If not found, create a new group
+      if (!yearGroup) {
+        yearGroup = { years: curr.years, datascope: [] };
+        acc.push(yearGroup);
+      }
+      
+      // Add the current data to the datascope array
+      yearGroup.datascope.push({
+        name: curr.name,
+        tCO2e: curr.tCO2e === null ? 0 : parseFloat(curr.tCO2e)  // Convert null to 0 and string to float
+      });
+      
+      return acc;
+    }, []);
+
+    res.status(200).json(result);
+  } catch (e) {
+    res.status(500).json(e.message);
+  }
+});
+
+
+
 /**
  * @swagger
  * /landscape:
@@ -233,6 +312,7 @@ app.get('/datascope/summary/:years/:id', async (req, res) => {
           SELECT 
               years,
               SUM(quantity * (
+                  (kgCO2e) +
                   (CO2 * gwp_CO2) + 
                   (Fossil_CH4 * gwp_Fossil_CH4) + 
                   (CH4 * gwp_CH4) + 
@@ -254,35 +334,13 @@ app.get('/datascope/summary/:years/:id', async (req, res) => {
           INNER JOIN 
               activityperiods ON data_scopes.activityperiod_id = activityperiods.id 
           WHERE 
-              catescopenums.id = :catescopenum_id 
-              AND years = :years  
+                   years = :years  
               AND activityperiod_id = :id
           GROUP BY 
               catescopenums.name, activityperiods.years
-
-          UNION
-
-          SELECT 
-              years,
-              SUM(quantity * (kgCO2e) / 1000) AS tco2e, 
-              catescopenums.name AS name  
-          FROM 
-              catescopenums 
-          INNER JOIN 
-              headcategories ON catescopenums.id = headcategories.scopenum_id 
-          INNER JOIN  
-              data_scopes ON headcategories.id = data_scopes.head_id 
-          INNER JOIN 
-              gwps ON data_scopes.GWP_id = gwps.id 
-          INNER JOIN 
-              activityperiods ON data_scopes.activityperiod_id = activityperiods.id 
-          WHERE 
-              catescopenums.id != :catescopenum_id 
-              AND years = :years 
-              AND activityperiod_id = :id 
-          GROUP BY 
-              catescopenums.name, activityperiods.years;
-      `, { replacements: { catescopenum_id: 1, years: req.params.years, id: req.params.id }, type: conn.QueryTypes.SELECT });
+          ORDER BY
+              catescopenums.id`, 
+              { replacements: {years: req.params.years, id: req.params.id }, type: conn.QueryTypes.SELECT });
 
       res.status(200).json(rawquery);
   } catch (e) {

@@ -485,8 +485,8 @@ app.get('/report/dipictDataReport/:id',async(req,res)=>{
  *     description: Retrieve a list of users from JSONPlaceholder. Can be used to populate a list of fake users when prototyping or testing an API.
  *     tags: [Report]
 */
-app.get('/generate-pdf', async(req, res) => {
-
+app.get('/generate-pdf/:id', async(req, res) => {
+    
     const doc = new PDFDocument({ size: 'a4' });
 
     // กำหนด Header เพื่อบอกว่าส่ง PDF กลับไปให้ Client
@@ -500,49 +500,32 @@ app.get('/generate-pdf', async(req, res) => {
     doc.font('./font/THSarabunNew.ttf');
 
     // เพิ่มข้อความหัวของหน้ากระดาษ
-    doc.fontSize(32).text('รายงานการปล่อยและดูดกลับก๊าซเรือนกระจก', { align: 'center', y: 0, bold: true });
-    doc.fontSize(32).text('ขององค์กร', { align: 'center', y: 0, bold: true });
+    doc.fontSize(24).text('รายงานการปล่อยและดูดกลับก๊าซเรือนกระจกขององค์กร', { align: 'center', y: 0, bold: true });
 
-    // กำหนดขอบของกรอบรูป
-
-    const ShowData = await CampusModels.findAll(
-        {
-            attributes:['id','campus_name'],
-            where:{
-                id:'MH'
-            },
-            include:[
-                {
-                    model:PlaceCmuModels,
-                    attributes:['id','fac_name'],
-                    where:{
-                        id:'MH2009'
+    const ShowData = await CampusModels.findAll({
+        attributes: ['id', 'campus_name'],
+        include: [{
+            model: PlaceCmuModels,
+            attributes: ['id', 'fac_name'],
+            include: [{
+                model: ActivityGHGModel,
+                required: false, // ใช้ left join เพื่อให้แสดงข้อมูลใน CampusModels ที่ไม่มีข้อมูลใน ActivityGHGModel
+                attributes: ['years'],
+                where: {
+                    id: req.params.id,
+                },
+                include: [{
+                        model: ImageFileModel,
+                        attributes: ['type_fr', 'file_name']
                     },
-                    include:[
-                        {
-                            model:ActivityGHGModel,
-                            attributes:['years'],
-                            where:{
-                                years:2023
-                            },
-                            include:[
-                                {
-                                    model:ImageFileModel,
-                                    attributes:['type_fr','file_name']
-                                },
-                                {
-                                    model:ReportModel,
-                                    attributes:['intro','tester','coordinator','responsible','monitor','assurance','materially','explanation','cfo_operation1','cfo_operation2','cfo_operation3','image_name']
-
-                                }
-                                
-                            ]
-                        }
-                    ]
-                }
-            ]
-        }
-    )
+                    {
+                        model: ReportModel,
+                        attributes: ['intro', 'tester', 'coordinator', 'responsible', 'monitor', 'assurance', 'materially', 'explanation', 'cfo_operation1', 'cfo_operation2', 'cfo_operation3', 'image_name']
+                    }
+                ]
+            }]
+        }]
+    });
     const today = new Date();
 
     const result = today.toLocaleDateString('th-TH', {
@@ -564,20 +547,20 @@ app.get('/generate-pdf', async(req, res) => {
         y: 160 // Y-coordinate of the image
     });
 
-    doc.fontSize(22).text('ชื่อองค์กร:', 50, 490);
-    doc.fontSize(20).text(`${fac.fac_name}`, 110, 492);
+    doc.fontSize(18).text('ชื่อองค์กร:', 70, 490);
+    doc.fontSize(16).text(`${fac.fac_name}`, 130, 492);
 
-    doc.fontSize(22).text('ที่อยู่:', 50, 520);
-    doc.fontSize(20).text(`${item.campus_name} `, 80, 522);
+    doc.fontSize(18).text('ที่อยู่:', 70, 520);
+    doc.fontSize(16).text(`${item.campus_name} `, 100, 522);
 
-    doc.fontSize(22).text('วันที่รายงานผล:', 50, 550);
-    doc.fontSize(20).text(`${result}`, 145, 552);
+    doc.fontSize(18).text('วันที่รายงานผล:', 70, 550);
+    doc.fontSize(16).text(`${result}`, 165, 552);
 
-    doc.fontSize(22).text('ระยะในการติดตามผล:', 50, 580);
-    doc.fontSize(20).text(`1 ม.ค. ${period.years + 543}  -  31 ธ.ค.  ${period.years + 543} `, 180, 582);
+    doc.fontSize(18).text('ระยะในการติดตามผล:', 70, 580);
+    doc.fontSize(16).text(`1 ม.ค. ${period.years + 543}  -  31 ธ.ค.  ${period.years + 543} `, 200, 582);
 
-    doc.fontSize(27).text('เพื่อการทวนสอบและรับรองผลคาร์บอนฟุตพริ้นท์ขององค์กร',100, 640);
-    doc.fontSize(26).text(' โดย องค์การบริหารจัดการก๊าซเรือนกระจก (องค์การมหาชน)',100, 670);
+    doc.fontSize(24).text('เพื่อการทวนสอบและรับรองผลคาร์บอนฟุตพริ้นท์ขององค์กร',100, 640);
+    doc.fontSize(24).text(' โดย องค์การบริหารจัดการก๊าซเรือนกระจก (องค์การมหาชน)',100, 670);
     });
     });
 });
@@ -729,7 +712,7 @@ drawCell(50, 150 + lineHeights * 6, columnWidths, '2.7 แนวทางที�
 drawCell(40 + columnWidths + cellSpacing, 150 + lineHeights * 6, columnWidths, `${report.monitor}`);
 
 drawCell(50, 150 + lineHeights * 7, columnWidths, '2.8 ระดับของการรับรอง (Level of Assurance)');
-drawCell(40 + columnWidths + cellSpacing, 150 + lineHeights * 7, columnWidths, `${report.assurance}`);
+drawCell(40 + columnWidths + cellSpacing, 150 + lineHeights * 7, columnWidths, `${report.assurance} `);
 
 drawCell(50, 150 + lineHeights * 8, columnWidths, '2.9 ระดับความมีสระสำคัญ (Materiality Threshold) ');
 drawCell(40 + columnWidths + cellSpacing, 150 + lineHeights * 8, columnWidths, `${report.materially}`);
@@ -752,21 +735,21 @@ drawCell(40 + columnWidths + cellSpacing, 150 + lineHeights * 8, columnWidths, `
     // Function to draw a cell in the table
     function drawCell2(x, y, width, text) {
         doc.rect(x, y, width, lineHeights2).stroke(headerColors2);
-        doc.fontSize(16).text(text, x + 5, y + 5);
+        doc.fontSize(14).text(text, x + 5, y + 5);
     }
     
     // Draw the table using drawCell function
     // First Row
     drawCell2(50, 150, columnWidths2, '1. แนวทางที่ใช้กำหนดขอบเขตองค์กร');
-    drawCell2(40 + columnWidths2 + 10, 150, columnWidths2, 'Cell 1,2');
+    drawCell2(40 + columnWidths2 + 10, 150, columnWidths2, 'ควบคุมดำเนินงาน (Operation Control)');
     
     // Second Row
-    drawCell2(50, 150 + lineHeights2, columnWidths2, '2. หน่วยสาธารณูปโภค ');
-    drawCell2(40 + columnWidths2 + 10, 150 + lineHeights2, columnWidths2, 'Cell 2,2');
+    drawCell2(50, 150 + lineHeights2, columnWidths2, '2.หน่วยสาธารณูปโภค(Facility)/พื้นที่ที่ครอบคลุมในรายงาน');
+    drawCell2(40 + columnWidths2 + 10, 150 + lineHeights2, columnWidths2, 'สถานศึกษา');
     
     // Third Row
     drawCell2(50, 150 + lineHeights2 * 2, columnWidths2, '3. เอกสารยืนยันขอบเขต');
-    drawCell2(40 + columnWidths2 + 10, 150 + lineHeights2 * 2, columnWidths2, 'Cell 3,2');
+    drawCell2(40 + columnWidths2 + 10, 150 + lineHeights2 * 2, columnWidths2, 'แผนที่โดยสังเขปดังหัวข้อที่ 3.1.2');
     
      
     doc.addPage();  
@@ -810,14 +793,25 @@ drawCell(40 + columnWidths + cellSpacing, 150 + lineHeights * 8, columnWidths, `
         });
     });
 
+/*     doc.addPage();
+     doc.fontSize(20).text('3.1.2 แผนผังขององค์กร', 20, 100);
+     ShowData.forEach((item) => {
+        item.faculties.forEach((fac) => {
+            fac.activityperiods.forEach(period => {
+                period.image_files.forEach((image_file) => { */
     //หน้า4
-     doc.addPage();
-    
-
+    /*  doc.addPage();
+     doc.fontSize(20).text('3.1.4 ระบุกิจกรรมทั้งหมดขององค์กร', 20, 100);
+                });
+            });
+            });
+            });
+ */
 
      //หน้า5
      doc.addPage();
      doc.fontSize(20).text('3.1.4 ระบุกิจกรรมทั้งหมดขององค์กร', 20, 100);
+     
 
       //หน้า6
       doc.addPage();
@@ -1135,50 +1129,57 @@ app.get('/test101', async (req, res) => {
 });
 
 
-app.get('/test202',async(req,res)=>{
-    try{
-        const ShowData = await CampusModels.findAll(
-            {
-                attributes:['id','campus_name'],
-                where:{
-                    id:'MH'
-                },
-                include:[
-                    {
-                        model:PlaceCmuModels,
-                        attributes:['id','fac_name'],
-                        where:{
-                            id:'MH2009'
+app.get('/test202/:id', async (req, res) => {
+    try {
+        const ShowData = await CampusModels.findAll({
+            attributes: ['id', 'campus_name'],
+            include: [{
+                model: PlaceCmuModels,
+                attributes: ['id', 'fac_name'],
+                include: [{
+                    model: ActivityGHGModel,
+                    required: false, // ใช้ left join เพื่อให้แสดงข้อมูลใน CampusModels ที่ไม่มีข้อมูลใน ActivityGHGModel
+                    attributes: ['years'],
+                    where: {
+                        id: req.params.id,
+                    },
+                    include: [{
+                            model: ImageFileModel,
+                            attributes: ['type_fr', 'file_name']
                         },
-                        include:[
-                            {
-                                model:ActivityGHGModel,
-                                attributes:['years'],
-                                where:{
-                                    years:2023
-                                },
-                                include:[
-                                    {
-                                        model:ImageFileModel,
-                                        attributes:['type_fr','file_name']
-                                    },
-                                    {
-                                        model:ReportModel,
-                                        attributes:['intro','tester','coordinator','responsible','monitor','assurance','materially','explanation','cfo_operation1','cfo_operation2','cfo_operation3','image_name']
+                        {
+                            model: ReportModel,
+                            attributes: ['intro', 'tester', 'coordinator', 'responsible', 'monitor', 'assurance', 'materially', 'explanation', 'cfo_operation1', 'cfo_operation2', 'cfo_operation3', 'image_name']
+                        }
+                    ]
+                }]
+            }]
+        });
 
-                                    }
-                                    
-                                ]
-                            }
-                        ]
-                    }
-                ]
-            }
-        )
-        res.status(200).json(ShowData);
-    }catch(e){
+        // กรองข้อมูลที่มี faculties เป็น empty array ออก
+        const filteredData = ShowData.filter(item => item.faculties.length > 0);
+
+        res.status(200).json(filteredData);
+    } catch (e) {
         res.status(500).json('Server Error ' + e.message);
     }
 });
+
+app.get('/test203/:id',async(req,res)=>{
+    try{
+       const query = `select * from h`
+       const datas = await conn.query(query, { type: QueryTypes.SELECT });
+
+       const api = datas.map(data => ({
+        name: data.name,
+        tCO2e: data.tCO2e
+      }));
+
+     res.status(200).json(show);  
+    }catch(e){
+        res.status(500).json(e.message);
+    }
+})
+
 
 module.exports = app
